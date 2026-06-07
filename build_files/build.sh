@@ -60,28 +60,15 @@ systemctl enable fwupd-refresh.timer 2>/dev/null || true
 dconf update || true
 
 ### 2e. Splash Plymouth (thème szh) ------------------------------------------
-# Thème de boot de la flotte (module « script ») déposé via system_files dans
-# /usr/share/plymouth/themes/szh. On le définit par défaut PUIS on régénère l'initramfs
-# pour l'y embarquer — indispensable pour afficher le splash ET le prompt de passphrase
-# LUKS dès le tout début du boot. Initramfs générique (--no-hostonly) pour une flotte.
-plymouth-set-default-theme szh
-KVER="$(ls /usr/lib/modules | head -1)"
-# --add ostree est CRITIQUE : sans ce module, l'initramfs ne peut pas monter la racine
-# ostree → poste non bootable. --reproducible : build déterministe. --no-hostonly :
-# initramfs générique (flotte). NB : des erreurs « cp ... xattr » peuvent apparaître au
-# build (overlayfs sans xattr) — connues et NON bloquantes (mainteneurs bootc).
-dracut --force --reproducible --no-hostonly --add ostree \
-    "/usr/lib/modules/${KVER}/initramfs.img" "${KVER}"
-
-# Garde-fou : l'initramfs régénéré DOIT contenir le module « ostree » (sinon la racine
-# ostree n'est pas montée → poste non bootable). On échoue le build s'il manque, pour
-# ne jamais publier une image qui ne démarre pas. (Si lsinitrd ne sort rien, on n'échoue
-# pas : on évite un faux négatif dû à l'outil dans le conteneur.)
-INITRAMFS_MODS="$(lsinitrd "/usr/lib/modules/${KVER}/initramfs.img" 2>/dev/null || true)"
-if [ -n "${INITRAMFS_MODS}" ] && ! printf '%s\n' "${INITRAMFS_MODS}" | grep -qw ostree ; then
-    echo "ERREUR FATALE: module 'ostree' absent de l'initramfs regenere -> image non bootable." >&2
-    exit 1
-fi
+# Thème de boot déposé dans /usr/share/plymouth/themes/szh (+ plymouth-plugin-script).
+# On le définit par défaut. ATTENTION : sur une image ostree/bootc, le thème n'apparaît
+# au boot QUE s'il est embarqué dans l'initramfs. Or régénérer l'initramfs DANS le build
+# conteneur s'est révélé non fiable (module « ostree » non garanti → risque de non-boot,
+# attrapé par un garde-fou lsinitrd). On NE régénère donc PAS ici : l'image conserve
+# l'initramfs Fedora éprouvé → boot fiable. Le thème reste prêt ; pour l'activer vraiment,
+# régénérer l'initramfs CÔTÉ POSTE (sur vrai matériel dracut inclut bien ostree) — à
+# valider sur un poste test (voir RESTE-A-FAIRE).
+plymouth-set-default-theme szh || true
 
 ### 3. Permissions ------------------------------------------------------------
 chmod +x /usr/libexec/fleet-flatpak-sync

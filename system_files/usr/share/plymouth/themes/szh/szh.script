@@ -1,0 +1,69 @@
+# SZH / CSPS  -  S1 (wordmark centre + barre de progression rouge)
+
+# --- Fond : nuit #252B46 (valeurs 0..1) ---
+Window.SetBackgroundTopColor(0.145, 0.169, 0.275);
+Window.SetBackgroundBottomColor(0.145, 0.169, 0.275);
+
+sw = Window.GetWidth();
+sh = Window.GetHeight();
+
+# --- Logo (wordmark) centre ---
+logo.image  = Image("logo.png");
+# adapte la taille du logo a la largeur d ecran (~30%)
+target_w = sw * 0.30;
+scale    = target_w / logo.image.GetWidth();
+logo.image = logo.image.Scale(logo.image.GetWidth() * scale,
+                              logo.image.GetHeight() * scale);
+logo.w = logo.image.GetWidth();
+logo.h = logo.image.GetHeight();
+logo.sprite = Sprite(logo.image);
+logo.sprite.SetX(sw / 2 - logo.w / 2);
+logo.sprite.SetY(sh / 2 - logo.h / 2 - 30);
+logo.sprite.SetZ(10);
+
+# --- Barre de progression ---
+bar.w = sw * 0.22;
+bar.h = 6;
+bar.x = sw / 2 - bar.w / 2;
+bar.y = sh / 2 + logo.h / 2 + 70;
+
+track.image  = Image("track.png").Scale(bar.w, bar.h);
+track.sprite = Sprite(track.image);
+track.sprite.SetX(bar.x);
+track.sprite.SetY(bar.y);
+track.sprite.SetZ(11);
+
+fun progress_callback(duration, progress) {
+    w = bar.w * progress;
+    if (w < 1) w = 1;
+    fill.image  = Image("fill.png").Scale(w, bar.h);
+    fill.sprite = Sprite(fill.image);
+    fill.sprite.SetX(bar.x);
+    fill.sprite.SetY(bar.y);
+    fill.sprite.SetZ(12);
+}
+Plymouth.SetBootProgressFunction(progress_callback);
+
+# --- Messages (mises a jour / fsck) sous la barre ---
+msg.sprite = Sprite();
+msg.sprite.SetZ(13);
+fun message_callback(text) {
+    msg.image = Image.Text(text, 1, 1, 1, 0.7);
+    msg.sprite.SetImage(msg.image);
+    msg.sprite.SetX(sw / 2 - msg.image.GetWidth() / 2);
+    msg.sprite.SetY(bar.y + 36);
+}
+Plymouth.SetMessageFunction(message_callback);
+
+# --- Saisie mot de passe (disques chiffres LUKS) ---
+fun display_password_callback(prompt, bullets) {
+    pw = "";
+    i = 0;
+    while (i < bullets) { pw += "*"; i++; }
+    pwd.image = Image.Text(prompt + "  " + pw, 1, 1, 1, 0.9);
+    pwd.sprite = Sprite(pwd.image);
+    pwd.sprite.SetX(sw / 2 - pwd.image.GetWidth() / 2);
+    pwd.sprite.SetY(bar.y + 36);
+    pwd.sprite.SetZ(14);
+}
+Plymouth.SetDisplayPasswordFunction(display_password_callback);

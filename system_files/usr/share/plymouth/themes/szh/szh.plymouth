@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=SZH / CSPS
+Description=SZH/CSPS boot splash (S1 · wordmark centre + barre)
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/szh
+ScriptFile=/usr/share/plymouth/themes/szh/szh.script

@@ -12,6 +12,7 @@ set -euxo pipefail
 #   greenboot (+default-health-checks) : auto-rollback si un boot post-MAJ échoue
 #   gnome-shell-extension-appindicator : zone de notification GNOME (tray kDrive)
 #   tpm2-tools                         : diagnostic TPM pour le chiffrement LUKS
+#   plymouth-plugin-script             : module « script » requis par le thème de boot szh
 #
 # Gestion d'énergie : on GARDE le défaut Fedora (tuned + tuned-ppd, déjà dans la base et
 # activé). Le sélecteur de profil d'énergie GNOME fonctionne nativement. Pas de TLP.
@@ -23,7 +24,8 @@ rpm-ostree install \
     greenboot \
     greenboot-default-health-checks \
     gnome-shell-extension-appindicator \
-    tpm2-tools
+    tpm2-tools \
+    plymouth-plugin-script
 
 ### 2. Services systemd -------------------------------------------------------
 # Gestion d'énergie = défaut Fedora : tuned + tuned-ppd (sélecteur de profil GNOME natif).
@@ -56,6 +58,15 @@ systemctl enable fwupd-refresh.timer 2>/dev/null || true
 # Compile la base dconf système (profil + clés déposés via system_files) : active
 # l'extension AppIndicator par défaut (tray kDrive). Détails : docs/04.
 dconf update || true
+
+### 2e. Splash Plymouth (thème szh) ------------------------------------------
+# Thème de boot de la flotte (module « script ») déposé via system_files dans
+# /usr/share/plymouth/themes/szh. On le définit par défaut PUIS on régénère l'initramfs
+# pour l'y embarquer — indispensable pour afficher le splash ET le prompt de passphrase
+# LUKS dès le tout début du boot. Initramfs générique (--no-hostonly) pour une flotte.
+plymouth-set-default-theme szh
+KVER="$(ls /usr/lib/modules | head -1)"
+dracut --force --no-hostonly "/usr/lib/modules/${KVER}/initramfs.img" "${KVER}"
 
 ### 3. Permissions ------------------------------------------------------------
 chmod +x /usr/libexec/fleet-flatpak-sync

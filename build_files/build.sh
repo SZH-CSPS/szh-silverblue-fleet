@@ -73,6 +73,16 @@ KVER="$(ls /usr/lib/modules | head -1)"
 dracut --force --reproducible --no-hostonly --add ostree \
     "/usr/lib/modules/${KVER}/initramfs.img" "${KVER}"
 
+# Garde-fou : l'initramfs régénéré DOIT contenir le module « ostree » (sinon la racine
+# ostree n'est pas montée → poste non bootable). On échoue le build s'il manque, pour
+# ne jamais publier une image qui ne démarre pas. (Si lsinitrd ne sort rien, on n'échoue
+# pas : on évite un faux négatif dû à l'outil dans le conteneur.)
+INITRAMFS_MODS="$(lsinitrd "/usr/lib/modules/${KVER}/initramfs.img" 2>/dev/null || true)"
+if [ -n "${INITRAMFS_MODS}" ] && ! printf '%s\n' "${INITRAMFS_MODS}" | grep -qw ostree ; then
+    echo "ERREUR FATALE: module 'ostree' absent de l'initramfs regenere -> image non bootable." >&2
+    exit 1
+fi
+
 ### 3. Permissions ------------------------------------------------------------
 chmod +x /usr/libexec/fleet-flatpak-sync
 chmod +x /usr/libexec/fleet-tpm-enroll

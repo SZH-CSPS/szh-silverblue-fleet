@@ -17,7 +17,7 @@
 # Base Silverblue. Le tag est piloté par Renovate (voir .github/renovate.json5).
 # Confirme la stable courante : skopeo inspect docker://quay.io/fedora/fedora-silverblue:42
 ARG BASE_IMAGE=quay.io/fedora/fedora-silverblue
-ARG FEDORA_VERSION=42
+ARG FEDORA_VERSION=44 
 FROM ${BASE_IMAGE}:${FEDORA_VERSION}
 
 # --- kDrive (optionnel) ------------------------------------------------------
@@ -37,7 +37,7 @@ COPY build_files/ /tmp/build_files/
 
 # Couche système + services + intégration kDrive + commit ostree (dans build.sh).
 RUN KDRIVE_URL="${KDRIVE_URL}" KDRIVE_VERSION="${KDRIVE_VERSION}" \
-    /tmp/build_files/build.sh
+    bash /tmp/build_files/build.sh
 
 # Vérifie que l'image respecte les invariants bootc (échoue le build si non).
 RUN bootc container lint

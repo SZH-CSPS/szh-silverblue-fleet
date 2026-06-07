@@ -1,0 +1,7 @@
+# Type de système de fichiers racine PAR DÉFAUT de la flotte.
+# Lu par `bootc install` ET par bootc-image-builder → évite l'erreur
+# « no default root filesystem type specified in container ».
+# btrfs = défaut de Fedora Silverblue. Valeurs possibles : ext4, xfs, btrfs.
+# Surchargeable dans une image dérivée (fichiers fusionnés par ordre alphanumérique).
+[install.filesystem.root]
+type = "btrfs"

@@ -66,7 +66,12 @@ dconf update || true
 # LUKS dès le tout début du boot. Initramfs générique (--no-hostonly) pour une flotte.
 plymouth-set-default-theme szh
 KVER="$(ls /usr/lib/modules | head -1)"
-dracut --force --no-hostonly "/usr/lib/modules/${KVER}/initramfs.img" "${KVER}"
+# --add ostree est CRITIQUE : sans ce module, l'initramfs ne peut pas monter la racine
+# ostree → poste non bootable. --reproducible : build déterministe. --no-hostonly :
+# initramfs générique (flotte). NB : des erreurs « cp ... xattr » peuvent apparaître au
+# build (overlayfs sans xattr) — connues et NON bloquantes (mainteneurs bootc).
+dracut --force --reproducible --no-hostonly --add ostree \
+    "/usr/lib/modules/${KVER}/initramfs.img" "${KVER}"
 
 ### 3. Permissions ------------------------------------------------------------
 chmod +x /usr/libexec/fleet-flatpak-sync

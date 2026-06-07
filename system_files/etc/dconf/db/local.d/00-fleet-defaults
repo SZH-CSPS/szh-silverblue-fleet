@@ -16,3 +16,16 @@ enabled-extensions=['appindicatorsupport@rgcjonas.gmail.com']
 # disponibles pour tous, basculables depuis la barre du haut (indicateur fr|de).
 # Non verrouillé : chacun peut réordonner / en retirer. La 1re est utilisée par défaut.
 sources=[('xkb', 'ch+fr'), ('xkb', 'ch')]
+
+[org/gnome/desktop/background]
+# Fond d'écran de la flotte : variante claire/sombre selon le thème de l'utilisateur.
+picture-uri='file:///usr/share/backgrounds/szh/szh-wallpaper-light.png'
+picture-uri-dark='file:///usr/share/backgrounds/szh/szh-wallpaper-dark.png'
+picture-options='zoom'
+primary-color='#252b46'
+
+[org/gnome/desktop/screensaver]
+# Écran de verrouillage : variante sombre.
+picture-uri='file:///usr/share/backgrounds/szh/szh-wallpaper-dark.png'
+picture-options='zoom'
+primary-color='#252b46'

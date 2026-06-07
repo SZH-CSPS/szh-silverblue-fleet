@@ -8,18 +8,17 @@ set -euxo pipefail
 
 ### 1. Paquets système (couche RPM) -------------------------------------------
 # On ne couche QUE ce qui n'est pas déjà fourni par la base Silverblue :
-#   tlp, tlp-rdw                       : gestion d'énergie (/etc/tlp.d/01-fleet.conf)
 #   distrobox                          : conteneurs dev/pipeline (WeasyPrint + Pandoc)
-#   greenboot (+default-health-checks) : auto-rollback si un boot post-MAJ échoue (docs/06)
-#   gnome-shell-extension-appindicator : zone de notification GNOME (tray kDrive, docs/04)
-#   tpm2-tools                         : diagnostic TPM pour le chiffrement LUKS (docs/06)
+#   greenboot (+default-health-checks) : auto-rollback si un boot post-MAJ échoue
+#   gnome-shell-extension-appindicator : zone de notification GNOME (tray kDrive)
+#   tpm2-tools                         : diagnostic TPM pour le chiffrement LUKS
+#
+# Gestion d'énergie : on GARDE le défaut Fedora (tuned + tuned-ppd, déjà dans la base et
+# activé). Le sélecteur de profil d'énergie GNOME fonctionne nativement. Pas de TLP.
 #
 # NE PAS coucher git ni python3 (déjà dans la base → rpm-ostree casse sur « already provided »).
-# fwupd est en général DÉJÀ dans la base : on ne le couche pas (vérifie : rpm -q fwupd ;
-# ajoute-le ici seulement s'il manque). Mises à jour firmware : docs/06.
+# fwupd est en général DÉJÀ dans la base : on ne le couche pas (vérifie : rpm -q fwupd).
 rpm-ostree install \
-    tlp \
-    tlp-rdw \
     distrobox \
     greenboot \
     greenboot-default-health-checks \
@@ -27,9 +26,9 @@ rpm-ostree install \
     tpm2-tools
 
 ### 2. Services systemd -------------------------------------------------------
-# TLP et power-profiles-daemon (fourni par GNOME) se marchent dessus → masquer l'un.
-systemctl mask power-profiles-daemon.service
-systemctl enable tlp.service
+# Gestion d'énergie = défaut Fedora : tuned + tuned-ppd (sélecteur de profil GNOME natif).
+# tuned est activé par défaut dans la base depuis F41 ; on l'assure par sûreté.
+systemctl enable tuned.service 2>/dev/null || true
 
 # Installe/synchronise les Flatpaks par défaut au démarrage (unité + script fournis).
 systemctl enable fleet-flatpak-setup.service

@@ -1,5 +1,5 @@
 {
-    "_comment": "MODELE — NE PAS activer tant que la signature ne fonctionne pas (sinon les MAJ echouent). Voir docs/06. Remplace szh-csps et copie ce fichier vers /etc/containers/policy.json sur les postes, avec la cle publique dans /etc/pki/containers/silverblue-x13.pub.",
+    "_comment": "Imposition cosign ACTIVE pour la flotte : seules les images silverblue-x13 SIGNEES sont acceptees. Tout le reste reste permis (default). Cle publique : /etc/pki/containers/silverblue-x13.pub. Voir docs (repo prive) / RESTE-A-FAIRE section 4.",
     "default": [
         { "type": "insecureAcceptAnything" }
     ],

@@ -34,6 +34,10 @@ systemctl enable tlp.service
 # Installe/synchronise les Flatpaks par défaut au démarrage (unité + script fournis).
 systemctl enable fleet-flatpak-setup.service
 
+# Enrolement TPM2 du LUKS au premier boot (saisie passphrase sur console ; docs/06).
+# No-op propre si le disque n'est pas chiffre ou s'il n'y a pas de TPM.
+systemctl enable fleet-tpm-enroll.service
+
 ### 2b. greenboot (auto-rollback santé) --------------------------------------
 # Active la chaîne greenboot. Boucle + garde : un unit absent selon la version ne doit
 # pas interrompre le build. Les checks vivent dans /etc/greenboot/check/. Détails : docs/06.

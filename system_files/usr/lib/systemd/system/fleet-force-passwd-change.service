@@ -1,0 +1,16 @@
+[Unit]
+Description=Forcer le changement du mot de passe szh au premier login
+# Ne s'exécute qu'une fois (stamp posé après).
+ConditionPathExists=!/var/lib/fleet/passwd-expired
+After=multi-user.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=/usr/bin/mkdir -p /var/lib/fleet
+# Expire le mot de passe de szh s'il existe (chage -d 0 → changement requis).
+ExecStart=/usr/bin/bash -c 'id szh >/dev/null 2>&1 && chage -d 0 szh || true'
+ExecStartPost=/usr/bin/touch /var/lib/fleet/passwd-expired
+
+[Install]
+WantedBy=multi-user.target

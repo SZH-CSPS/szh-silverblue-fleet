@@ -39,6 +39,9 @@ systemctl enable fleet-flatpak-setup.service
 # No-op propre si le disque n'est pas chiffre ou s'il n'y a pas de TPM.
 systemctl enable fleet-tpm-enroll.service
 
+# Force le changement du mot de passe initial de szh au premier login (docs).
+systemctl enable fleet-force-passwd-change.service
+
 ### 2b. greenboot (auto-rollback santé) --------------------------------------
 # Active la chaîne greenboot. Boucle + garde : un unit absent selon la version ne doit
 # pas interrompre le build. Les checks vivent dans /etc/greenboot/check/. Détails : docs/06.

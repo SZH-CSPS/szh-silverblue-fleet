@@ -34,3 +34,11 @@ key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPnQNBmneOgeUGh4MOwWqv6jXnWkGdkmBKGxd
 # system_files/usr/lib/bootc/kargs.d/10-fleet.toml).
 # [customizations.kernel]
 # append = ""
+
+# Utilisateur de bureau (session GNOME). Mot de passe initial "changeme" (HACHÉ).
+# Le hash d'un mot de passe aussi connu n'est PAS un secret → c'est le changement
+# OBLIGATOIRE au premier login (service fleet-force-passwd-change) qui protège.
+# Pas dans wheel (sudo) : admin reste le compte privilégié. Ajouter "wheel" si besoin.
+[[customizations.user]]
+name = "szh"
+password = "$6$c65R4wMFoMCgb8xR$YA5IidAIWk./KNSsett7QljenuDU.KcQyu1AgCqnqilHFTLZiXFRPXAsaGf0RQ5.UXMUCn4uAI4PWk.xcU2at/"

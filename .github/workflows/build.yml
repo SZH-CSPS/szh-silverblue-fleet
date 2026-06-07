@@ -1,0 +1,83 @@
+name: Build & push — Silverblue X13
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+  schedule:
+    # Quotidien : reconstruit pour récupérer les correctifs de sécurité de la base Fedora.
+    - cron: '0 5 * * *'
+  workflow_dispatch: {}
+
+env:
+  IMAGE_NAME: silverblue-x13
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write          # nécessaire pour pousser vers ghcr.io
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Définir le registre (ghcr exige des minuscules)
+        run: echo "IMAGE_REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+
+      - name: Build image (buildah, depuis le Containerfile)
+        id: build
+        uses: redhat-actions/buildah-build@v2
+        with:
+          image: ${{ env.IMAGE_NAME }}
+          tags: latest ${{ github.sha }}
+          containerfiles: ./Containerfile
+          oci: true
+          # Variable de dépôt KDRIVE_URL (Settings → Secrets and variables → Actions →
+          # Variables) = MOTIF d'URL de l'AppImage kDrive avec %VERSION% à la place du
+          # numéro (ex. https://.../kDrive-%VERSION%-amd64.AppImage). La version vient de
+          # l'ARG KDRIVE_VERSION du Containerfile (monté par Renovate). Vide → kDrive omis.
+          build-args: |
+            KDRIVE_URL=${{ vars.KDRIVE_URL }}
+
+      - name: Login ghcr.io
+        uses: redhat-actions/podman-login@v1
+        with:
+          registry: ${{ env.IMAGE_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          image: ${{ env.IMAGE_NAME }}
+          tags: latest ${{ github.sha }}
+          registry: ${{ env.IMAGE_REGISTRY }}
+
+      # --- Signature cosign (activable via la variable de dépôt COSIGN_ENABLED=true) ---
+      # Prérequis : voir docs/06 (générer la paire de clés, ajouter les secrets SIGNING_SECRET
+      # + SIGNING_SECRET_PASSWORD, committer la clé publique). Tant que COSIGN_ENABLED ≠ true,
+      # ces étapes sont ignorées (aucun impact sur le build).
+      - name: Installer cosign
+        if: ${{ vars.COSIGN_ENABLED == 'true' }}
+        uses: sigstore/cosign-installer@v3
+
+      - name: Signer l'image (par digest)
+        if: ${{ vars.COSIGN_ENABLED == 'true' }}
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
+          COSIGN_PASSWORD: ${{ secrets.SIGNING_SECRET_PASSWORD }}
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq skopeo
+          DIGEST=$(skopeo inspect --format '{{.Digest}}' "docker://${IMAGE_REGISTRY}/${IMAGE_NAME}:latest")
+          echo "Signature de ${IMAGE_REGISTRY}/${IMAGE_NAME}@${DIGEST}"
+          cosign sign -y --key env://COSIGN_PRIVATE_KEY "${IMAGE_REGISTRY}/${IMAGE_NAME}@${DIGEST}"
+
+# -----------------------------------------------------------------------------
+# Variante registre AUTO-HÉBERGÉ (Forgejo) au lieu de ghcr.io :
+#   - IMAGE_REGISTRY: forgejo.example.ch/<org>
+#   - Remplacer le login par redhat-actions/podman-login avec
+#     username/password = secrets pointant vers un compte de dépôt Forgejo.
+# -----------------------------------------------------------------------------

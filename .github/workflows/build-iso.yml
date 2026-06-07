@@ -1,0 +1,59 @@
+name: Build ISO d'installation (manuel)
+
+# Génère une ISO d'installation Anaconda à partir de l'image publiée (Méthode B,
+# docs/05). Déclenchement manuel uniquement. Le chiffrement LUKS se choisit DANS
+# l'installateur (BIB ne chiffre pas — docs/06).
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag de l'image à graver dans l'ISO"
+        default: latest
+        required: true
+
+env:
+  IMAGE_NAME: silverblue-x13
+
+jobs:
+  build-iso:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read        # lecture de l'image sur ghcr (utile si package privé)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Définir le registre (ghcr exige des minuscules)
+        run: echo "IMAGE_REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+
+      - name: Login ghcr.io
+        uses: redhat-actions/podman-login@v1
+        with:
+          registry: ${{ env.IMAGE_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pré-tirer l'image (pour le stockage local partagé avec BIB)
+        run: sudo podman pull "${IMAGE_REGISTRY}/${IMAGE_NAME}:${{ inputs.tag }}"
+
+      - name: Construire l'ISO (bootc-image-builder)
+        run: |
+          mkdir -p output
+          sudo podman run --rm --privileged \
+            --security-opt label=type:unconfined_t \
+            -v "${PWD}/bootc-image-builder/config.toml:/config.toml:ro" \
+            -v "${PWD}/output:/output" \
+            -v /var/lib/containers/storage:/var/lib/containers/storage \
+            quay.io/centos-bootc/bootc-image-builder:latest \
+              --type anaconda-iso \
+              --config /config.toml \
+              --local \
+              "${IMAGE_REGISTRY}/${IMAGE_NAME}:${{ inputs.tag }}"
+
+      - name: Publier l'ISO en artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: silverblue-x13-install-iso
+          path: output/**/*.iso
+          if-no-files-found: error

@@ -1,0 +1,18 @@
+# =============================================================================
+#  Défauts GNOME de la flotte — base dconf « local ».
+#  Compilé par `dconf update` au build (voir build_files/build.sh).
+#  NON verrouillés : l'utilisateur peut les modifier. Pour imposer une valeur, créer
+#  /etc/dconf/db/local.d/locks/<nom> listant les clés à verrouiller (voir docs/04).
+# =============================================================================
+
+[org/gnome/shell]
+# Active l'extension AppIndicator / KStatusNotifierItem (zone de notification).
+# Indispensable au tray de kDrive (client Qt) et utile à d'autres apps.
+# UUID vérifié dans le metadata.json de l'extension.
+enabled-extensions=['appindicatorsupport@rgcjonas.gmail.com']
+
+[org/gnome/desktop/input-sources]
+# Flotte bilingue DE-CH / FR-CH : les deux dispositions clavier suisses sont
+# disponibles pour tous, basculables depuis la barre du haut (indicateur fr|de).
+# Non verrouillé : chacun peut réordonner / en retirer. La 1re est utilisée par défaut.
+sources=[('xkb', 'ch+fr'), ('xkb', 'ch')]

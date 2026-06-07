@@ -1,0 +1,36 @@
+# =============================================================================
+#  Config bootc-image-builder (BIB) — Méthode B : ISO d'installation personnalisée.
+#  Utilisée par .github/workflows/build-iso.yml. Schéma : https://osbuild.org/docs/bootc/
+#
+#  IMPORTANT (docs/06) : BIB ne gère PAS le chiffrement LUKS. Le type "anaconda-iso"
+#  produit un installateur interactif où l'on COCHE « Chiffrer mes données » à
+#  l'installation. Ce fichier ne sert qu'à pré-remplir un utilisateur, la locale et
+#  d'éventuels kargs. Pour du non-interactif chiffré, fournir un kickstart Anaconda.
+# =============================================================================
+
+[customizations]
+
+# Locale et clavier de la flotte (Suisse romande).
+[customizations.locale]
+# Flotte bilingue DE-CH / FR-CH : les DEUX locales sont installées/disponibles.
+# La 1re est le défaut ; chaque utilisateur choisit sa langue au login GDM et dans
+# Paramètres GNOME → Région et langue. (Bascule possible : mettre de_CH en 1er.)
+languages = ["fr_CH.UTF-8", "de_CH.UTF-8"]
+# Clavier par défaut (modifiable par utilisateur). Les deux dispositions suisses
+# sont proposées à tout le monde via dconf (voir system_files/.../00-fleet-defaults).
+keyboard = "ch(fr)"
+
+[customizations.timezone]
+timezone = "Europe/Zurich"
+
+# Utilisateur initial. REMPLACE la clé SSH (recommandé) ou utilise un mot de passe
+# HACHÉ (openssl passwd -6). Ne jamais committer de mot de passe en clair.
+[[customizations.user]]
+name = "admin"
+groups = ["wheel"]
+key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPnQNBmneOgeUGh4MOwWqv6jXnWkGdkmBKGxdvcC7Dv1 robin.morand@szh.ch"
+
+# Kernel args à l'installation (laisser vide ; les kargs durables sont dans
+# system_files/usr/lib/bootc/kargs.d/10-fleet.toml).
+# [customizations.kernel]
+# append = ""

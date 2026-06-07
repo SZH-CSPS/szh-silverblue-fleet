@@ -1,0 +1,26 @@
+# Flatpaks installés au premier démarrage par fleet-flatpak-sync (depuis Flathub).
+# Un identifiant par ligne. Les lignes vides et les commentaires (#) sont ignorés.
+# Matrice complète et justifications : docs/04-applications.md.
+
+# --- Navigateur & mail ---
+io.gitlab.librewolf-community
+org.mozilla.Thunderbird
+
+# --- Bureautique & lecture ---
+org.libreoffice.LibreOffice
+org.gnome.Papers
+com.zettlr.Zettlr
+org.videolan.VLC
+
+# --- Développement ---
+com.visualstudio.code
+
+# --- Proton ---
+me.proton.mail
+me.proton.pass
+com.protonvpn.www
+ch.protonmail.protonmail-bridge
+
+# --- Options (décommenter au besoin) ---
+# org.kde.okular          # lecteur PDF complet (annotations, formulaires, PDF/UA) — tire des deps KDE
+# com.vscodium.codium      # VS Code sans télémétrie Microsoft

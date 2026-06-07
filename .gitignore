@@ -1,0 +1,18 @@
+# Sorties de build / ISO
+/output/
+*.iso
+*.qcow2
+*.raw
+
+# Secrets cosign — NE JAMAIS committer la clé PRIVÉE.
+# (cosign.pub, la clé publique, DOIT être committée : elle n'est pas ignorée.)
+cosign.key
+*.private.key
+
+# Build du site MkDocs
+/site/
+
+# Divers
+.DS_Store
+__pycache__/
+*.pyc

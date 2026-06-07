@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# =============================================================================
+#  fleet-flatpak-sync — installe/synchronise les Flatpaks de la flotte.
+#  Lancé par fleet-flatpak-setup.service (oneshot, après le réseau).
+#  Idempotent : sûr à relancer (--or-update). Voir docs/04-applications.md.
+# =============================================================================
+set -uo pipefail
+
+LIST="/usr/share/fleet/flatpaks.list"
+[ -r "${LIST}" ] || { echo "Liste introuvable : ${LIST}" >&2; exit 0; }
+
+# Remote Flathub au niveau système (idempotent).
+flatpak remote-add --if-not-exists --system \
+    flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+
+rc=0
+while IFS= read -r line; do
+    line="${line%%#*}"                       # retire les commentaires
+    line="$(echo "${line}" | tr -d '[:space:]')"   # trim
+    [ -z "${line}" ] && continue
+    echo "→ ${line}"
+    if ! flatpak install --system --noninteractive --or-update flathub "${line}"; then
+        echo "  ÉCHEC : ${line}" >&2
+        rc=1
+    fi
+done < "${LIST}"
+
+exit "${rc}"

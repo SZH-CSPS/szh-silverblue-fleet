@@ -1,0 +1,34 @@
+{
+  // Renovate : montées de version automatiques (image de base + GitHub Actions).
+  // Active Renovate sur le dépôt (app GitHub ou instance auto-hébergée) — voir docs/02.
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: ["config:recommended", ":dependencyDashboard"],
+
+  // On ne gère en auto que : Actions + l'ARG FEDORA_VERSION du Containerfile.
+  enabledManagers: ["github-actions", "custom.regex"],
+
+  customManagers: [
+    {
+      // Image de base : ARG FEDORA_VERSION=42  → suit les tags de fedora-silverblue.
+      customType: "regex",
+      managerFilePatterns: ["/(^|/)Containerfile$/"],
+      matchStrings: ["ARG\\s+FEDORA_VERSION=(?<currentValue>\\d+)"],
+      depNameTemplate: "quay.io/fedora/fedora-silverblue",
+      datasourceTemplate: "docker",
+      versioningTemplate: "loose",
+    },
+    // kDrive : PAS d'auto-bump. Le nom de l'AppImage porte une version a 4 segments
+    // (ex. 3.8.2.6) dont le dernier est un build interne Infomaniak, ABSENT des tags
+    // GitHub (3 segments, ex. 3.8.5). Renovate ne peut donc pas produire une URL qui
+    // resout. Mise a jour MANUELLE de ARG KDRIVE_VERSION : recuperer la chaine exacte
+    // du nom de fichier sur la page de telechargement Infomaniak (docs/04).
+  ],
+
+  packageRules: [
+    {
+      // Regroupe les bumps d'Actions en une seule PR.
+      matchManagers: ["github-actions"],
+      groupName: "GitHub Actions",
+    },
+  ],
+}

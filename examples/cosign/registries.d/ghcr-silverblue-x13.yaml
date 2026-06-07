@@ -1,0 +1,7 @@
+# MODÈLE — à copier sur les postes en /etc/containers/registries.d/ une fois la
+# signature cosign validée (docs/06-securite-et-resilience.md). Remplace szh-csps.
+# Indique à containers/image que les signatures de cette image sont des attachments
+# sigstore (stockés dans le registre à côté de l'image), comme produit par `cosign sign`.
+docker:
+  ghcr.io/szh-csps/silverblue-x13:
+    use-sigstore-attachments: true

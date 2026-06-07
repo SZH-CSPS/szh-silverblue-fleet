@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# =============================================================================
+#  fleet-tpm-enroll — lie le déverrouillage LUKS au TPM2 (déverrouillage auto au boot).
+#
+#  PRÉREQUIS : le disque doit DÉJÀ être chiffré LUKS (choisi à l'installation — voir
+#  docs/06). Ce script ajoute un « token » TPM2 à l'en-tête LUKS existant ; il ne chiffre
+#  PAS un disque en clair.
+#
+#  À lancer UNE FOIS par machine, en root, après installation :  sudo fleet-tpm-enroll
+#  Conserve TOUJOURS ta phrase de passe LUKS : elle reste le moyen de secours.
+# =============================================================================
+set -euo pipefail
+
+if [ "$(id -u)" -ne 0 ]; then
+    echo "Lance ce script en root :  sudo fleet-tpm-enroll" >&2
+    exit 1
+fi
+
+# 1. Trouver la partition LUKS.
+dev="$(blkid -t TYPE=crypto_LUKS -o device | head -1 || true)"
+if [ -z "$dev" ]; then
+    echo "Aucune partition LUKS trouvée — le disque est-il chiffré ? (voir docs/06)" >&2
+    exit 1
+fi
+echo "Partition LUKS détectée : $dev"
+
+# 2. Vérifier la présence d'un TPM2.
+if [ ! -e /dev/tpmrm0 ] && [ ! -e /dev/tpm0 ]; then
+    echo "Aucun TPM2 détecté (/dev/tpmrm0). Active le TPM dans le firmware (UEFI)." >&2
+    exit 1
+fi
+
+# 3. Enrôler le TPM2, lié à PCR 7 (état Secure Boot — stable aux mises à jour du noyau).
+#    PCR 7 n'a de valeur que si Secure Boot est ACTIVÉ (voir docs/06).
+echo "Enrôlement TPM2 (PCR 7)… la phrase de passe LUKS actuelle va être demandée."
+systemd-cryptenroll "$dev" --tpm2-device=auto --tpm2-pcrs=7
+
+cat <<EON
+
+✓ Enrôlement effectué pour : $dev
+  • Redémarre pour tester le déverrouillage automatique.
+  • La phrase de passe LUKS reste valable (secours indispensable — ne la perds pas).
+  • Si Secure Boot / le firmware change, le TPM peut refuser : déverrouille à la phrase
+    de passe, puis relance « sudo fleet-tpm-enroll » pour ré-enrôler.
+  • Lister les enrôlements :  systemd-cryptenroll "$dev"   (ou : cryptsetup luksDump "$dev")
+EON

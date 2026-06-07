@@ -1,0 +1,7 @@
+# Profil dconf de l'utilisateur.
+# Ordre de lecture : la base "user" (modifiable par l'utilisateur) PUIS la base
+# système "local" (défauts de la flotte, compilée par `dconf update` au build).
+# Les clés de "local" servent de défaut ; l'utilisateur peut les surcharger,
+# sauf si elles sont verrouillées (etc/dconf/db/local.d/locks/).
+user-db:user
+system-db:local

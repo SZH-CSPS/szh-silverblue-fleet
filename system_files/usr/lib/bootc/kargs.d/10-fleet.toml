@@ -1,0 +1,11 @@
+# Arguments noyau de la flotte, appliqués par bootc (usr/lib/bootc/kargs.d/*.toml).
+# Volontairement VIDE : aucun karg imposé par défaut. Les modifier ici les versionne
+# avec l'image (cohérent sur toute la flotte) plutôt que via grubby poste par poste.
+#
+# Exemples (décommenter au besoin) :
+#   kargs = ["quiet", "splash"]                 # boot silencieux + splash Plymouth
+#   kargs = ["mitigations=auto"]                # politique de mitigations CPU
+#
+# Filtrer par architecture si nécessaire :
+#   match-architectures = ["x86_64"]
+kargs = []

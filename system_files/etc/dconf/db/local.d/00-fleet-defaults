@@ -34,3 +34,9 @@ primary-color='#252b46'
 picture-uri='file:///usr/share/backgrounds/szh/szh-wallpaper-dark.png'
 picture-options='zoom'
 primary-color='#252b46'
+
+[org/gnome/nautilus/preferences]
+# Double-clic sur un script exécutable (.sh) → propose Exécuter / Afficher (au lieu d'ouvrir
+# l'éditeur). Permet de lancer change_password.sh au clic. (Le script se relance lui-même
+# dans un terminal si besoin, pour les invites sudo/passwd.)
+executable-text-activation='ask'

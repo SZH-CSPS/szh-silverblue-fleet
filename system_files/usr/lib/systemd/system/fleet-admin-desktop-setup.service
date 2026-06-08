@@ -9,8 +9,9 @@ After=multi-user.target
 Type=oneshot
 RemainAfterExit=yes
 ExecStartPre=/usr/bin/mkdir -p /var/lib/fleet
-# Si admin existe : installe le script (exécutable, possédé par admin) à la racine du home.
-ExecStart=/usr/bin/bash -c 'id admin >/dev/null 2>&1 && install -o admin -g admin -m 0755 /usr/share/fleet/change_password.sh /home/admin/change_password.sh || true'
+# Si admin existe : installe le script à la racine du home (0700 : peut contenir des secrets
+# en clair → lisible/exécutable par admin uniquement).
+ExecStart=/usr/bin/bash -c 'id admin >/dev/null 2>&1 && install -o admin -g admin -m 0700 /usr/share/fleet/change_password.sh /home/admin/change_password.sh || true'
 ExecStartPost=/usr/bin/touch /var/lib/fleet/admin-home-done
 
 [Install]

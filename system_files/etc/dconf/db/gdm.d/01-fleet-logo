@@ -1,0 +1,5 @@
+# Logo affiché sur l'écran de connexion GDM (greeter). Base dconf « gdm » (compilée par
+# `dconf update` au build, comme la base « local »). On réutilise le logo szh du thème
+# Plymouth. Pour un autre fichier, ajuste le chemin (PNG/SVG, fond transparent recommandé).
+[org/gnome/login-screen]
+logo='/usr/share/plymouth/themes/szh/logo.png'

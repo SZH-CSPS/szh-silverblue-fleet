@@ -42,9 +42,12 @@ systemctl enable tuned.service 2>/dev/null || true
 # (pas le .service, déclenché par le timer). Voir fleet-flatpak-setup.{service,timer}.
 systemctl enable fleet-flatpak-setup.timer
 
-# Enrolement TPM2 du LUKS au premier boot (saisie passphrase sur console ; docs/06).
-# No-op propre si le disque n'est pas chiffre ou s'il n'y a pas de TPM.
-systemctl enable fleet-tpm-enroll.service
+# Enrôlement TPM2 du LUKS : le service de BOOT était non fiable (prompt console invisible
+# derrière Plymouth/GDM + stamp posé avant la tentative → jamais retenté). On NE l'active
+# donc PAS. L'enrôlement se fait de façon fiable, en terminal, via le script admin
+# change_password.sh (auto si non enrôlé, ou option --enrolltpm). Voir fleet-rotate-secrets.
+# (Le script /usr/libexec/fleet-tpm-enroll reste dispo pour un « sudo fleet-tpm-enroll » manuel.)
+# systemctl enable fleet-tpm-enroll.service   # désactivé volontairement
 
 # Premier login szh-csps : pose le nom d'affichage "SZH-CSPS" + force le changement du
 # mot de passe initial (service oneshot, une seule fois). Voir le service homonyme.
@@ -84,16 +87,28 @@ systemctl enable fwupd-refresh.timer 2>/dev/null || true
 # l'extension AppIndicator par défaut (tray kDrive). Détails : docs/04.
 dconf update || true
 
-### 2e. Splash Plymouth (thème szh) ------------------------------------------
+### 2e. Splash Plymouth (thème szh) + RÉGÉNÉRATION INITRAMFS ------------------
 # Thème de boot déposé dans /usr/share/plymouth/themes/szh (+ plymouth-plugin-script).
-# On le définit par défaut. ATTENTION : sur une image ostree/bootc, le thème n'apparaît
-# au boot QUE s'il est embarqué dans l'initramfs. Or régénérer l'initramfs DANS le build
-# conteneur s'est révélé non fiable (module « ostree » non garanti → risque de non-boot,
-# attrapé par un garde-fou lsinitrd). On NE régénère donc PAS ici : l'image conserve
-# l'initramfs Fedora éprouvé → boot fiable. Le thème reste prêt ; pour l'activer vraiment,
-# régénérer l'initramfs CÔTÉ POSTE (sur vrai matériel dracut inclut bien ostree) — à
-# valider sur un poste test (voir RESTE-A-FAIRE).
+# On le définit par défaut, puis on RÉGÉNÈRE l'initramfs pour y embarquer :
+#   - le thème Plymouth szh (sinon le splash szh n'apparaît PAS au boot) ;
+#   - le keymap clavier suisse (/etc/vconsole.conf → invite LUKS en suisse).
+# Validé d'abord côté poste (rpm-ostree initramfs), puis porté ici.
+# GARDE-FOU : on EXIGE le module « ostree » dans l'initramfs régénéré (sans lui, non-boot)
+# → si absent, on échoue le build plutôt que de livrer une image qui ne démarre pas.
 plymouth-set-default-theme szh || true
+
+kver="$(ls -1 /usr/lib/modules | head -n1)"
+echo "Régénération de l'initramfs pour le noyau ${kver} (thème szh + keymap)…"
+# --no-hostonly(-cmdline) : initramfs GÉNÉRIQUE (sinon dracut l'adapterait au CONTENEUR de
+# build → non-boot sur le vrai matériel). Le mode générique embarque aussi tous les keymaps
+# (dont fr_CH) et Plymouth. --add ostree : indispensable au boot ostree (vérifié ci-dessous).
+dracut --force --no-hostonly --no-hostonly-cmdline --add ostree \
+    --kver "${kver}" "/usr/lib/modules/${kver}/initramfs.img"
+if ! lsinitrd "/usr/lib/modules/${kver}/initramfs.img" | grep -q 'ostree'; then
+    echo "ERREUR : initramfs régénéré SANS module ostree → risque de non-boot. Abandon du build." >&2
+    exit 1
+fi
+echo "✓ initramfs régénéré (module ostree présent)."
 
 ### 3. Permissions ------------------------------------------------------------
 chmod +x /usr/libexec/fleet-flatpak-sync

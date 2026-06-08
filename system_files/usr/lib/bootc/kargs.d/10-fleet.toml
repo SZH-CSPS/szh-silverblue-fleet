@@ -8,4 +8,9 @@
 #
 # Filtrer par architecture si nécessaire :
 #   match-architectures = ["x86_64"]
-kargs = []
+#
+# rd.vconsole.keymap=fr_CH : force le keymap suisse romand DANS l'initramfs → l'invite de
+# mot de passe LUKS au boot est en clavier suisse (et non QWERTY US par défaut). Effectif
+# seulement si le keymap fr_CH est présent dans l'initramfs générique (À VÉRIFIER au boot ;
+# sinon régénérer l'initramfs avec le keymap). Voir aussi /etc/vconsole.conf.
+kargs = ["rd.vconsole.keymap=fr_CH"]

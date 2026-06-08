@@ -1,4 +1,7 @@
-# SZH / CSPS  -  S1 (wordmark centre + barre de progression rouge)
+# SZH / CSPS  -  S1 (wordmark centre + barre d'activité indéterminée)
+# Barre INDÉTERMINÉE (segment qui glisse) plutôt qu'une progression estimée : sur ostree +
+# LUKS l'estimation se remplit d'un coup puis fige pendant le déchiffrement. Le glissement,
+# piloté par SetRefreshFunction (~50 img/s), ne fige jamais.
 
 # --- Fond : nuit #252B46 (valeurs 0..1) ---
 Window.SetBackgroundTopColor(0.145, 0.169, 0.275);
@@ -21,7 +24,7 @@ logo.sprite.SetX(sw / 2 - logo.w / 2);
 logo.sprite.SetY(sh / 2 - logo.h / 2 - 30);
 logo.sprite.SetZ(10);
 
-# --- Barre de progression ---
+# --- Piste (fond de barre) ---
 bar.w = sw * 0.22;
 bar.h = 6;
 bar.x = sw / 2 - bar.w / 2;
@@ -33,16 +36,22 @@ track.sprite.SetX(bar.x);
 track.sprite.SetY(bar.y);
 track.sprite.SetZ(11);
 
-fun progress_callback(duration, progress) {
-    w = bar.w * progress;
-    if (w < 1) w = 1;
-    fill.image  = Image("fill.png").Scale(w, bar.h);
-    fill.sprite = Sprite(fill.image);
-    fill.sprite.SetX(bar.x);
-    fill.sprite.SetY(bar.y);
-    fill.sprite.SetZ(12);
+# --- Segment glissant (créé UNE fois, on ne fait que le déplacer) ---
+seg.w = bar.w * 0.30;
+seg.image  = Image("fill.png").Scale(seg.w, bar.h);
+seg.sprite = Sprite(seg.image);
+seg.sprite.SetY(bar.y);
+seg.sprite.SetZ(12);
+
+frac = 0;
+dir  = 1;
+fun refresh_callback() {
+    frac = frac + dir * 0.012;
+    if (frac >= 1) { frac = 1; dir = 0 - 1; }
+    if (frac <= 0) { frac = 0; dir = 1; }
+    seg.sprite.SetX(bar.x + frac * (bar.w - seg.w));
 }
-Plymouth.SetBootProgressFunction(progress_callback);
+Plymouth.SetRefreshFunction(refresh_callback);
 
 # --- Messages (mises a jour / fsck) sous la barre ---
 msg.sprite = Sprite();

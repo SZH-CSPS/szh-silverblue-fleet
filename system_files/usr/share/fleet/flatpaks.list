@@ -16,8 +16,8 @@ org.videolan.VLC
 com.visualstudio.code
 
 # --- Proton ---
-me.proton.mail
-me.proton.pass
+me.proton.Mail
+me.proton.Pass
 com.protonvpn.www
 ch.protonmail.protonmail-bridge
 

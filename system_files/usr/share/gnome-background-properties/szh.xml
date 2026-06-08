@@ -5,7 +5,7 @@
     <name>SZH / CSPS</name>
     <filename>/usr/share/backgrounds/szh/szh-wallpaper-light.png</filename>
     <filename-dark>/usr/share/backgrounds/szh/szh-wallpaper-dark.png</filename-dark>
-    <options>zoom</options>
+    <options>scaled</options>
     <pcolor>#252b46</pcolor>
     <scolor>#252b46</scolor>
   </wallpaper>

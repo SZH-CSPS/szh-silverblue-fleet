@@ -39,7 +39,8 @@ systemctl enable fleet-flatpak-setup.service
 # No-op propre si le disque n'est pas chiffre ou s'il n'y a pas de TPM.
 systemctl enable fleet-tpm-enroll.service
 
-# Force le changement du mot de passe initial de szh au premier login (docs).
+# Premier login szh-csps : pose le nom d'affichage "SZH-CSPS" + force le changement du
+# mot de passe initial (service oneshot, une seule fois). Voir le service homonyme.
 systemctl enable fleet-force-passwd-change.service
 
 ### 2b. greenboot (auto-rollback santé) --------------------------------------
@@ -56,6 +57,13 @@ done
 # fwupd est supposé présent dans la base ; on active le rafraîchissement des métadonnées
 # LVFS. L'APPLICATION des MAJ firmware reste manuelle/maîtrisée (docs/06).
 systemctl enable fwupd-refresh.timer 2>/dev/null || true
+
+### 2c-bis. Dépôts tiers (fedora-third-party) --------------------------------
+# Active les "Third Party Repositories" pour TOUT LE MONDE, par défaut, sans invite.
+# Écrit l'état dans /etc/fedora-third-party.conf → la logithèque (GNOME Software) ne
+# propose plus "Activer / Ignorer" (ces boutons exigeaient une auth admin par poste).
+# Indépendant du compte utilisateur. No-op propre si l'outil est absent.
+fedora-third-party enable 2>/dev/null || true
 
 ### 2d. Défauts GNOME (dconf) -------------------------------------------------
 # Compile la base dconf système (profil + clés déposés via system_files) : active

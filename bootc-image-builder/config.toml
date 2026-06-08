@@ -23,11 +23,14 @@ keyboard = "ch(fr)"
 [customizations.timezone]
 timezone = "Europe/Zurich"
 
-# Utilisateur initial. REMPLACE la clé SSH (recommandé) ou utilise un mot de passe
-# HACHÉ (openssl passwd -6). Ne jamais committer de mot de passe en clair.
+# Compte de gestion privilégié (wheel/sudo). Connexion par clé SSH ; mot de passe initial
+# "changeme" (HACHÉ) uniquement pour permettre sudo et le premier login local.
+# ⚠️ Le hash est PUBLIC : changer le mot de passe dès le premier login (passwd admin).
+# Masqué de la liste GDM via system_files/usr/lib/tmpfiles.d/fleet-gdm-hide-admin.conf.
 [[customizations.user]]
 name = "admin"
 groups = ["wheel"]
+password = "$6$c65R4wMFoMCgb8xR$YA5IidAIWk./KNSsett7QljenuDU.KcQyu1AgCqnqilHFTLZiXFRPXAsaGf0RQ5.UXMUCn4uAI4PWk.xcU2at/"
 key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPnQNBmneOgeUGh4MOwWqv6jXnWkGdkmBKGxdvcC7Dv1 robin.morand@szh.ch"
 
 # Kernel args à l'installation (laisser vide ; les kargs durables sont dans
@@ -35,10 +38,11 @@ key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPnQNBmneOgeUGh4MOwWqv6jXnWkGdkmBKGxd
 # [customizations.kernel]
 # append = ""
 
-# Utilisateur de bureau (session GNOME). Mot de passe initial "changeme" (HACHÉ).
-# Le hash d'un mot de passe aussi connu n'est PAS un secret → c'est le changement
-# OBLIGATOIRE au premier login (service fleet-force-passwd-change) qui protège.
-# Pas dans wheel (sudo) : admin reste le compte privilégié. Ajouter "wheel" si besoin.
+# Utilisateur de bureau (session GNOME). NON privilégié : aucun groupe → PAS de wheel/sudo.
+# Mot de passe initial "changeme" (HACHÉ). Le hash d'un mot de passe aussi connu n'est PAS
+# un secret : c'est le changement OBLIGATOIRE au premier login (service
+# fleet-force-passwd-change) qui protège. Le nom d'AFFICHAGE "SZH-CSPS" (champ GECOS) est
+# posé par ce même service au 1er boot — config.toml ne gère pas de nom d'affichage.
 [[customizations.user]]
-name = "szh"
+name = "szh-csps"
 password = "$6$c65R4wMFoMCgb8xR$YA5IidAIWk./KNSsett7QljenuDU.KcQyu1AgCqnqilHFTLZiXFRPXAsaGf0RQ5.UXMUCn4uAI4PWk.xcU2at/"

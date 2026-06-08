@@ -21,11 +21,14 @@ sources=[('xkb', 'ch+fr'), ('xkb', 'ch')]
 # Fond d'écran de la flotte : variante claire/sombre selon le thème de l'utilisateur.
 picture-uri='file:///usr/share/backgrounds/szh/szh-wallpaper-light.png'
 picture-uri-dark='file:///usr/share/backgrounds/szh/szh-wallpaper-dark.png'
-picture-options='zoom'
+# 'scaled' = image entière visible (fit), marges remplies par primary-color.
+# Comme primary-color == fond de l'image (#252b46), aucun recadrage ni bande visible,
+# quelle que soit la résolution/ratio de l'écran. 'zoom' recadrait (logo coupé sur 16:9).
+picture-options='scaled'
 primary-color='#252b46'
 
 [org/gnome/desktop/screensaver]
 # Écran de verrouillage : variante sombre.
 picture-uri='file:///usr/share/backgrounds/szh/szh-wallpaper-dark.png'
-picture-options='zoom'
+picture-options='scaled'
 primary-color='#252b46'

@@ -1,63 +1,51 @@
 # =============================================================================
 #  Config bootc-image-builder (BIB) — Méthode B : ISO d'installation personnalisée.
-#  Utilisée par .github/workflows/build-iso.yml. Schéma : https://osbuild.org/docs/bootc/
+#  Utilisée par .github/workflows/build-iso.yml.
 #
-#  CHIFFREMENT LUKS : comme l'install est automatisée par le kickstart généré (users,
-#  locale, etc. pré-remplis), Anaconda NE s'arrête PAS sur la case « Chiffrer mes
-#  données ». On force donc le chiffrement via [customizations.installer.kickstart]
-#  ci-dessous (autopart --encrypted). La passphrase d'AMORÇAGE est "changeme",
-#  à changer au premier login (script bureau admin → fleet-rotate-secrets), après quoi
-#  fleet-tpm-enroll lie le TPM2 pour le déverrouillage automatique.
+#  CORRECTIF (erreur « kickstart users … not compatible with user-supplied kickstart
+#  content ») : BIB interdit d'avoir À LA FOIS des [[customizations.user]] structurés ET
+#  un kickstart fourni (installer.kickstart.contents). Comme le chiffrement LUKS EXIGE le
+#  kickstart (autopart --encrypted ; BIB n'a pas de chiffrement natif — vérifié en source),
+#  on met TOUT dans le kickstart : partitionnement chiffré + comptes. Plus aucun bloc
+#  [[customizations.user]].
+#
+#  Passphrase d'AMORÇAGE LUKS = « changeme » (publique) → à changer au 1er login, puis
+#  fleet-tpm-enroll lie le TPM2. Mots de passe utilisateurs = hash de « changeme » → à
+#  changer au 1er login (le hash d'un mot de passe connu n'est pas un secret).
 # =============================================================================
 
 [customizations]
 
-# Locale et clavier de la flotte (Suisse romande).
+# Locale et clavier (Suisse, bilingue FR-CH / DE-CH). Gérés en customizations structurées :
+# ils ne génèrent PAS de commandes « user/group », donc aucun conflit avec le kickstart.
 [customizations.locale]
-# Flotte bilingue DE-CH / FR-CH : les DEUX locales sont installées/disponibles.
-# La 1re est le défaut ; chaque utilisateur choisit sa langue au login GDM et dans
-# Paramètres GNOME → Région et langue. (Bascule possible : mettre de_CH en 1er.)
 languages = ["fr_CH.UTF-8", "de_CH.UTF-8"]
-# Clavier par défaut (modifiable par utilisateur). Les deux dispositions suisses
-# sont proposées à tout le monde via dconf (voir system_files/.../00-fleet-defaults).
 keyboard = "ch(fr)"
 
 [customizations.timezone]
 timezone = "Europe/Zurich"
 
-# --- Chiffrement disque LUKS -------------------------------------------------
-# Partitionnement chiffré, passphrase d'AMORÇAGE "changeme" (publique, à changer dès le
-# 1er login via le script du bureau admin). ⚠️ À VALIDER SUR VM : un autopart fourni ici
-# peut entrer en conflit avec le partitionnement que BIB génère par défaut selon les
-# versions. Si conflit ("autopart specified multiple times"), retirer le clearpart/zerombr
-# ou ajuster. Le type btrfs reste cohérent avec usr/lib/bootc/install/00-fleet.toml.
+# --- Kickstart unique : chiffrement LUKS + comptes ---------------------------
+# (Remplace les anciens [[customizations.user]], qui entraient en conflit avec ce bloc.)
 [customizations.installer.kickstart]
 contents = """
+# --- Partitionnement chiffré (LUKS) ---
+# Passphrase d'amorçage « changeme » (à changer au 1er login). Le type btrfs est fixé ICI :
+# du coup, retire « --rootfs btrfs » de la commande podman pour ne PAS définir le système
+# de fichiers à deux endroits (voir note en bas du build-iso.yml).
 zerombr
 clearpart --all --initlabel
 autopart --type btrfs --encrypted --passphrase=changeme
+
+# --- Comptes (équivalent des anciens [[customizations.user]]) ---
+# admin : privilégié (wheel/sudo), connexion par clé SSH. Mot de passe initial haché.
+user --name=admin --groups=wheel --iscrypted --password=$6$c65R4wMFoMCgb8xR$YA5IidAIWk./KNSsett7QljenuDU.KcQyu1AgCqnqilHFTLZiXFRPXAsaGf0RQ5.UXMUCn4uAI4PWk.xcU2at/
+sshkey --username=admin "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPnQNBmneOgeUGh4MOwWqv6jXnWkGdkmBKGxdvcC7Dv1 robin.morand@szh.ch"
+
+# szh-csps : utilisateur de bureau, NON privilégié (aucun groupe → pas de sudo).
+user --name=szh-csps --iscrypted --password=$6$c65R4wMFoMCgb8xR$YA5IidAIWk./KNSsett7QljenuDU.KcQyu1AgCqnqilHFTLZiXFRPXAsaGf0RQ5.UXMUCn4uAI4PWk.xcU2at/
+
+# Verrouille la connexion root directe. (Si BIB se plaint d'un « rootpw » en double,
+# supprime cette ligne — peu probable ici puisqu'on ne déclare plus d'users structurés.)
+rootpw --lock
 """
-
-# Compte de gestion privilégié (wheel/sudo). Connexion par clé SSH ; mot de passe initial
-# "changeme" (HACHÉ) uniquement pour permettre sudo et le premier login local.
-# ⚠️ Le hash est PUBLIC : changer le mot de passe dès le premier login (passwd admin).
-# Masqué de la liste GDM via system_files/usr/lib/tmpfiles.d/fleet-gdm-hide-admin.conf.
-[[customizations.user]]
-name = "admin"
-groups = ["wheel"]
-password = "$6$c65R4wMFoMCgb8xR$YA5IidAIWk./KNSsett7QljenuDU.KcQyu1AgCqnqilHFTLZiXFRPXAsaGf0RQ5.UXMUCn4uAI4PWk.xcU2at/"
-key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPnQNBmneOgeUGh4MOwWqv6jXnWkGdkmBKGxdvcC7Dv1 robin.morand@szh.ch"
-
-# Kernel args à l'installation (laisser vide ; les kargs durables sont dans
-# system_files/usr/lib/bootc/kargs.d/10-fleet.toml).
-# [customizations.kernel]
-# append = ""
-
-# Utilisateur de bureau (session GNOME). NON privilégié : aucun groupe → PAS de wheel/sudo.
-# Mot de passe initial "changeme" (HACHÉ). Le hash d'un mot de passe aussi connu n'est PAS
-# un secret : c'est le changement OBLIGATOIRE au premier login (service
-# fleet-force-passwd-change) qui protège. Le nom d'AFFICHAGE "SZH-CSPS" (champ GECOS) est
-# posé par ce même service au 1er boot — config.toml ne gère pas de nom d'affichage.
-[[customizations.user]]
-name = "szh-csps"
-password = "$6$c65R4wMFoMCgb8xR$YA5IidAIWk./KNSsett7QljenuDU.KcQyu1AgCqnqilHFTLZiXFRPXAsaGf0RQ5.UXMUCn4uAI4PWk.xcU2at/"

@@ -31,12 +31,22 @@ FROM ${BASE_IMAGE}:${FEDORA_VERSION}
 ARG KDRIVE_VERSION=3.8.2.6
 ARG KDRIVE_URL=""
 
+# --- VeraCrypt ---------------------------------------------------------------
+# RPM officiel couché au build (absent de Flathub/dépôts Fedora). URL fournie par la
+# variable de dépôt vars.VERACRYPT_URL (Settings → Variables), passée en --build-arg via
+# .github/workflows/build.yml — comme kDrive. Vide → VeraCrypt OMIS.
+#   ex. vars.VERACRYPT_URL = https://launchpad.net/veracrypt/trunk/1.26.24/+download/veracrypt-1.26.24-Fedora-40-x86_64.rpm
+# RPM Fedora-40 (seul publié) → résolution des deps à valider sur Fedora 44.
+# Voir build_files/install-veracrypt.sh.
+ARG VERACRYPT_URL=""
+
 # Fichiers déposés tels quels sur l'image, puis scripts de build.
 COPY system_files/ /
 COPY build_files/ /tmp/build_files/
 
 # Couche système + services + intégration kDrive + commit ostree (dans build.sh).
 RUN KDRIVE_URL="${KDRIVE_URL}" KDRIVE_VERSION="${KDRIVE_VERSION}" \
+    VERACRYPT_URL="${VERACRYPT_URL}" \
     bash /tmp/build_files/build.sh
 
 # Vérifie que l'image respecte les invariants bootc (échoue le build si non).

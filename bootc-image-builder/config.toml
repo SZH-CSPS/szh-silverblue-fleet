@@ -2,10 +2,12 @@
 #  Config bootc-image-builder (BIB) — Méthode B : ISO d'installation personnalisée.
 #  Utilisée par .github/workflows/build-iso.yml. Schéma : https://osbuild.org/docs/bootc/
 #
-#  IMPORTANT (docs/06) : BIB ne gère PAS le chiffrement LUKS. Le type "anaconda-iso"
-#  produit un installateur interactif où l'on COCHE « Chiffrer mes données » à
-#  l'installation. Ce fichier ne sert qu'à pré-remplir un utilisateur, la locale et
-#  d'éventuels kargs. Pour du non-interactif chiffré, fournir un kickstart Anaconda.
+#  CHIFFREMENT LUKS : comme l'install est automatisée par le kickstart généré (users,
+#  locale, etc. pré-remplis), Anaconda NE s'arrête PAS sur la case « Chiffrer mes
+#  données ». On force donc le chiffrement via [customizations.installer.kickstart]
+#  ci-dessous (autopart --encrypted). La passphrase d'AMORÇAGE est "changeme",
+#  à changer au premier login (script bureau admin → fleet-rotate-secrets), après quoi
+#  fleet-tpm-enroll lie le TPM2 pour le déverrouillage automatique.
 # =============================================================================
 
 [customizations]
@@ -22,6 +24,19 @@ keyboard = "ch(fr)"
 
 [customizations.timezone]
 timezone = "Europe/Zurich"
+
+# --- Chiffrement disque LUKS -------------------------------------------------
+# Partitionnement chiffré, passphrase d'AMORÇAGE "changeme" (publique, à changer dès le
+# 1er login via le script du bureau admin). ⚠️ À VALIDER SUR VM : un autopart fourni ici
+# peut entrer en conflit avec le partitionnement que BIB génère par défaut selon les
+# versions. Si conflit ("autopart specified multiple times"), retirer le clearpart/zerombr
+# ou ajuster. Le type btrfs reste cohérent avec usr/lib/bootc/install/00-fleet.toml.
+[customizations.installer.kickstart]
+contents = """
+zerombr
+clearpart --all --initlabel
+autopart --type btrfs --encrypted --passphrase=changeme
+"""
 
 # Compte de gestion privilégié (wheel/sudo). Connexion par clé SSH ; mot de passe initial
 # "changeme" (HACHÉ) uniquement pour permettre sudo et le premier login local.

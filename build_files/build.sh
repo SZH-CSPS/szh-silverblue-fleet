@@ -43,6 +43,10 @@ systemctl enable fleet-tpm-enroll.service
 # mot de passe initial (service oneshot, une seule fois). Voir le service homonyme.
 systemctl enable fleet-force-passwd-change.service
 
+# Dépose le lanceur "Rotation des secrets" sur le bureau d'admin au premier boot
+# (change LUKS + mot de passe admin, retire la clé d'amorçage "changeme").
+systemctl enable fleet-admin-desktop-setup.service
+
 ### 2b. greenboot (auto-rollback santé) --------------------------------------
 # Active la chaîne greenboot. Boucle + garde : un unit absent selon la version ne doit
 # pas interrompre le build. Les checks vivent dans /etc/greenboot/check/. Détails : docs/06.
@@ -84,12 +88,17 @@ plymouth-set-default-theme szh || true
 ### 3. Permissions ------------------------------------------------------------
 chmod +x /usr/libexec/fleet-flatpak-sync
 chmod +x /usr/libexec/fleet-tpm-enroll
+chmod +x /usr/libexec/fleet-rotate-secrets
 chmod +x /etc/greenboot/check/wanted.d/20-fleet-network.sh
 
 ### 3b. kDrive (AppImage pré-extraite + wrapper natif) ------------------------
 # Ne fait quelque chose que si KDRIVE_URL est passé au build (sinon ignoré proprement,
 # sans créer de lanceur cassé). Voir build_files/install-kdrive.sh et docs/04.
 bash /tmp/build_files/install-kdrive.sh
+
+### 3c. VeraCrypt (RPM officiel couché) ---------------------------------------
+# Couche le RPM VeraCrypt (cf. install-veracrypt.sh). Vide VERACRYPT_URL → ignoré.
+bash /tmp/build_files/install-veracrypt.sh
 
 ### 4. Nettoyage + commit ostree (obligatoire sur une base ostree) ------------
 rm -rf /var/cache /var/lib/dnf /tmp/build_files

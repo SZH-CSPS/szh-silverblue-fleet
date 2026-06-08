@@ -41,6 +41,7 @@ jobs:
           # l'ARG KDRIVE_VERSION du Containerfile (monté par Renovate). Vide → kDrive omis.
           build-args: |
             KDRIVE_URL=${{ vars.KDRIVE_URL }}
+            VERACRYPT_URL=${{ vars.VERACRYPT_URL }}
 
       - name: Login ghcr.io
         uses: redhat-actions/podman-login@v1

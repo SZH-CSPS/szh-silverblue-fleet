@@ -1,0 +1,17 @@
+# Dépose le lanceur "Rotation des secrets" sur le bureau d'admin, au premier boot.
+# Activé au build (build.sh). oneshot, une seule fois (stamp posé après).
+[Unit]
+Description=Dépose le lanceur "Rotation des secrets" sur le bureau d'admin (1er boot)
+ConditionPathExists=!/var/lib/fleet/admin-desktop-done
+After=multi-user.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=/usr/bin/mkdir -p /var/lib/fleet
+# Si admin existe : crée ~/Desktop puis y installe le lanceur (exécutable, possédé par admin).
+ExecStart=/usr/bin/bash -c 'id admin >/dev/null 2>&1 && install -d -o admin -g admin -m 0755 /home/admin/Desktop && install -o admin -g admin -m 0755 /usr/share/fleet/fleet-rotate-secrets.desktop /home/admin/Desktop/fleet-rotate-secrets.desktop || true'
+ExecStartPost=/usr/bin/touch /var/lib/fleet/admin-desktop-done
+
+[Install]
+WantedBy=multi-user.target

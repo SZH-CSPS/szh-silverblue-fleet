@@ -1,0 +1,22 @@
+# Réessaie l'installation des Flatpaks de la flotte CHAQUE MINUTE, jusqu'au succès.
+# Activé au build (build.sh : systemctl enable fleet-flatpak-setup.timer).
+#
+# OnUnitInactiveSec=1min → la prochaine tentative est planifiée 1 min APRÈS que le service
+# a fini (état inactive). Donc tant que l'install tourne (gros téléchargements), le timer
+# ne replanifie pas, et systemd n'exécute jamais deux instances du même service en
+# parallèle → AUCUN risque de relances concurrentes.
+#
+# Une fois le stamp /var/lib/fleet/flatpaks-installed posé : la Condition ci-dessous fait
+# que le timer ne démarre plus aux boots suivants, et le service est court-circuité.
+[Unit]
+Description=Réessai périodique d'installation des Flatpaks de la flotte
+ConditionPathExists=/usr/share/fleet/flatpaks.list
+ConditionPathExists=!/var/lib/fleet/flatpaks-installed
+
+[Timer]
+OnBootSec=20s
+OnUnitInactiveSec=1min
+Unit=fleet-flatpak-setup.service
+
+[Install]
+WantedBy=timers.target

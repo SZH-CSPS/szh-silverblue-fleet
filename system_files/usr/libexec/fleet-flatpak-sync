@@ -1,17 +1,35 @@
 #!/usr/bin/env bash
 # =============================================================================
 #  fleet-flatpak-sync — installe/synchronise les Flatpaks de la flotte.
-#  Lancé par fleet-flatpak-setup.service (oneshot, après le réseau).
-#  Idempotent : sûr à relancer (--or-update). Voir docs/04-applications.md.
+#  Déclenché par fleet-flatpak-setup.timer : RÉESSAI CHAQUE MINUTE jusqu'au succès,
+#  puis pose un STAMP de succès (/var/lib/fleet/flatpaks-installed) → ne se relance plus
+#  (le timer ET le service sont court-circuités par leur ConditionPathExists sur ce stamp).
+#
+#  Pourquoi : au 1er boot, network-online.target peut être « atteint » avant que le WiFi
+#  soit associé / le DNS prêt (« could not resolve hostname ») → l'install échouait une
+#  fois et ne reprenait pas. Le timer fournit le réessai ; ce script ne fait qu'UNE
+#  tentative et sort en échec si le réseau n'est pas prêt.
+#  Idempotent : sûr à relancer (--or-update).
 # =============================================================================
 set -uo pipefail
 
 LIST="/usr/share/fleet/flatpaks.list"
+FLATHUB_REPO="https://dl.flathub.org/repo/flathub.flatpakrepo"
+STAMP="/var/lib/fleet/flatpaks-installed"
+
 [ -r "${LIST}" ] || { echo "Liste introuvable : ${LIST}" >&2; exit 0; }
 
-# Remote Flathub au niveau système (idempotent).
-flatpak remote-add --if-not-exists --system \
-    flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+# Garde-fou : déjà réussi → rien à faire (le service/timer sont normalement déjà coupés).
+[ -e "${STAMP}" ] && { echo "Flatpaks déjà installés (${STAMP}) — rien à faire."; exit 0; }
+
+# Réseau prêt ? Test réel de joignabilité de Flathub. Sinon échec → le timer relance dans 1 min.
+if ! curl -sSf -o /dev/null --max-time 15 "${FLATHUB_REPO}"; then
+    echo "Flathub injoignable (réseau pas prêt ?) → nouvel essai dans ~1 min." >&2
+    exit 1
+fi
+
+# Remote Flathub système (idempotent).
+flatpak remote-add --if-not-exists --system flathub "${FLATHUB_REPO}"
 
 rc=0
 while IFS= read -r line; do
@@ -25,4 +43,11 @@ while IFS= read -r line; do
     fi
 done < "${LIST}"
 
+if [ "${rc}" -eq 0 ]; then
+    mkdir -p "$(dirname "${STAMP}")"
+    touch "${STAMP}"
+    echo "✓ Tous les Flatpaks installés → ${STAMP} posé, plus de relance."
+else
+    echo "Au moins un Flatpak a échoué → pas de stamp, nouvel essai dans ~1 min." >&2
+fi
 exit "${rc}"

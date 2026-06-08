@@ -13,6 +13,9 @@ set -euxo pipefail
 #   gnome-shell-extension-appindicator : zone de notification GNOME (tray kDrive)
 #   tpm2-tools                         : diagnostic TPM pour le chiffrement LUKS
 #   plymouth-plugin-script             : module « script » requis par le thème de boot szh
+#   fuse + fuse-libs                   : FUSE 2 (libfuse.so.2) requis par VeraCrypt pour
+#                                        monter les volumes (absent de la base → à coucher ;
+#                                        sinon « libfuse.so.2: cannot open shared object »).
 #
 # Gestion d'énergie : on GARDE le défaut Fedora (tuned + tuned-ppd, déjà dans la base et
 # activé). Le sélecteur de profil d'énergie GNOME fonctionne nativement. Pas de TLP.
@@ -25,15 +28,19 @@ rpm-ostree install \
     greenboot-default-health-checks \
     gnome-shell-extension-appindicator \
     tpm2-tools \
-    plymouth-plugin-script
+    plymouth-plugin-script \
+    fuse \
+    fuse-libs
 
 ### 2. Services systemd -------------------------------------------------------
 # Gestion d'énergie = défaut Fedora : tuned + tuned-ppd (sélecteur de profil GNOME natif).
 # tuned est activé par défaut dans la base depuis F41 ; on l'assure par sûreté.
 systemctl enable tuned.service 2>/dev/null || true
 
-# Installe/synchronise les Flatpaks par défaut au démarrage (unité + script fournis).
-systemctl enable fleet-flatpak-setup.service
+# Installe les Flatpaks de la flotte : timer qui réessaie chaque minute jusqu'au succès,
+# puis stamp /var/lib/fleet/flatpaks-installed → plus de relance. On active le TIMER
+# (pas le .service, déclenché par le timer). Voir fleet-flatpak-setup.{service,timer}.
+systemctl enable fleet-flatpak-setup.timer
 
 # Enrolement TPM2 du LUKS au premier boot (saisie passphrase sur console ; docs/06).
 # No-op propre si le disque n'est pas chiffre ou s'il n'y a pas de TPM.
@@ -63,11 +70,14 @@ done
 systemctl enable fwupd-refresh.timer 2>/dev/null || true
 
 ### 2c-bis. Dépôts tiers (fedora-third-party) --------------------------------
-# Active les "Third Party Repositories" pour TOUT LE MONDE, par défaut, sans invite.
-# Écrit l'état dans /etc/fedora-third-party.conf → la logithèque (GNOME Software) ne
-# propose plus "Activer / Ignorer" (ces boutons exigeaient une auth admin par poste).
-# Indépendant du compte utilisateur. No-op propre si l'outil est absent.
-fedora-third-party enable 2>/dev/null || true
+# Activés pour TOUTE la flotte via le fichier d'état LIVRÉ DANS L'IMAGE :
+#   system_files/etc/fedora-third-party.conf  ([main] enabled = 1)
+# → GNOME Software ne propose plus "Activer / Ignorer" (auth admin par poste), pour tous
+#   les comptes, déterministe (committé par ostree).
+# On NE lance PAS « fedora-third-party enable/refresh » ici : l'outil gérerait lui-même le
+# remote Flathub (version filtrée Fedora possible), ce qui entrerait en conflit avec notre
+# Flathub COMPLET ajouté par fleet-flatpak-sync (requis pour VS Code, Proton, etc.).
+# Rien à faire dans build.sh : le fichier suffit.
 
 ### 2d. Défauts GNOME (dconf) -------------------------------------------------
 # Compile la base dconf système (profil + clés déposés via system_files) : active

@@ -66,14 +66,26 @@ fun message_callback(text) {
 Plymouth.SetMessageFunction(message_callback);
 
 # --- Saisie mot de passe (disques chiffres LUKS) ---
+# Sprite PERSISTANT (créé une fois) dont on met à jour l'image/opacité : pattern fiable.
+# On n'utilise QUE de l'ASCII ('*') pour ne dépendre d'aucun glyphe spécial dans l'initramfs.
+pwd.sprite = Sprite();
+pwd.sprite.SetZ(20);
+pwd.sprite.SetOpacity(0);
+
 fun display_password_callback(prompt, bullets) {
     pw = "";
     i = 0;
     while (i < bullets) { pw += "*"; i++; }
-    pwd.image = Image.Text(prompt + "  " + pw, 1, 1, 1, 0.9);
-    pwd.sprite = Sprite(pwd.image);
+    pwd.image = Image.Text(prompt + "   " + pw, 1, 1, 1, 1);
+    pwd.sprite.SetImage(pwd.image);
     pwd.sprite.SetX(sw / 2 - pwd.image.GetWidth() / 2);
-    pwd.sprite.SetY(bar.y + 36);
-    pwd.sprite.SetZ(14);
+    pwd.sprite.SetY(bar.y + 40);
+    pwd.sprite.SetOpacity(1);
 }
 Plymouth.SetDisplayPasswordFunction(display_password_callback);
+
+# Hors phase de saisie : on masque le prompt (évite qu'il reste affiché).
+fun display_normal_callback() {
+    pwd.sprite.SetOpacity(0);
+}
+Plymouth.SetDisplayNormalFunction(display_normal_callback);

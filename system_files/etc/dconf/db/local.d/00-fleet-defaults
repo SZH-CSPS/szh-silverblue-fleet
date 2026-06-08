@@ -8,7 +8,8 @@
 [org/gnome/shell]
 # Active l'extension AppIndicator / KStatusNotifierItem (zone de notification).
 # Indispensable au tray de kDrive (client Qt) et utile à d'autres apps.
-# UUID vérifié dans le metadata.json de l'extension.
+# (Desktop Icons NG / ding non utilisé : absent de la base, et on ne passe plus par une
+#  icône de bureau — le script de rotation est à la racine du home d'admin.)
 enabled-extensions=['appindicatorsupport@rgcjonas.gmail.com']
 
 [org/gnome/desktop/input-sources]

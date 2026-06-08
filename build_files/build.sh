@@ -50,8 +50,8 @@ systemctl enable fleet-tpm-enroll.service
 # mot de passe initial (service oneshot, une seule fois). Voir le service homonyme.
 systemctl enable fleet-force-passwd-change.service
 
-# Dépose le lanceur "Rotation des secrets" sur le bureau d'admin au premier boot
-# (change LUKS + mot de passe admin, retire la clé d'amorçage "changeme").
+# Dépose change_password.sh à la racine du home d'admin au premier boot (rotation LUKS +
+# mot de passe admin, retrait de la clé d'amorçage "changeme"). À lancer à la main.
 systemctl enable fleet-admin-desktop-setup.service
 
 ### 2b. greenboot (auto-rollback santé) --------------------------------------

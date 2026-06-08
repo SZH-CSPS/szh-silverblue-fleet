@@ -1,5 +1,14 @@
-# Logo affiché sur l'écran de connexion GDM (greeter). Base dconf « gdm » (compilée par
-# `dconf update` au build, comme la base « local »). On réutilise le logo szh du thème
-# Plymouth. Pour un autre fichier, ajuste le chemin (PNG/SVG, fond transparent recommandé).
+# Logo de l'écran de connexion GDM (greeter). Base dconf « gdm » (compilée par dconf update).
+#
+# DÉSACTIVÉ pour l'instant (logo='') : on pointait vers le logo du thème Plymouth, mais il
+# est trop GRAND (couvre l'écran, recouvre la zone de mot de passe) ET BLANC (conçu pour le
+# fond sombre du splash → invisible/écrasant sur le greeter). GDM ne contraint pas assez sa
+# taille ici.
+#
+# Pour réactiver : fournir un logo DÉDIÉ, petit et au bon contraste —
+#   /usr/share/szh/gdm-logo.png  (~200–300 px de large, fond transparent),
+# puis mettre :  logo='/usr/share/szh/gdm-logo.png'
+# (gnome-shell met le greeter à l'échelle du moniteur → un PNG ~250 px convient en 1080p
+#  comme en 4K). Voir la discussion : asset à générer/redimensionner.
 [org/gnome/login-screen]
-logo='/usr/share/plymouth/themes/szh/logo.png'
+logo=''

@@ -53,8 +53,8 @@ systemctl enable fleet-flatpak-setup.timer
 # mot de passe initial (service oneshot, une seule fois). Voir le service homonyme.
 systemctl enable fleet-force-passwd-change.service
 
-# Dépose change_password.sh à la racine du home d'admin au premier boot (rotation LUKS +
-# mot de passe admin, retrait de la clé d'amorçage "changeme"). À lancer à la main.
+# Dépose post-install.sh à la racine du home d'admin au premier boot (TPM + rotation LUKS +
+# mot de passe admin + initramfs ; retrait de la clé d'amorçage "changeme"). À lancer à la main.
 systemctl enable fleet-admin-desktop-setup.service
 
 # Régénère l'initramfs côté poste au 1er boot (splash szh + clavier suisse à l'invite LUKS) :

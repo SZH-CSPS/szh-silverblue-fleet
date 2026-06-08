@@ -12,8 +12,9 @@ sh = Window.GetHeight();
 
 # --- Logo (wordmark) centre ---
 logo.image  = Image("logo.png");
-# adapte la taille du logo a la largeur d ecran (~30%)
-target_w = sw * 0.30;
+# adapte la taille du logo a la largeur d ecran (~15% → ~2x plus petit qu'avant).
+# Proportionnel à la largeur → cohérent en 1080p comme en 4K.
+target_w = sw * 0.15;
 scale    = target_w / logo.image.GetWidth();
 logo.image = logo.image.Scale(logo.image.GetWidth() * scale,
                               logo.image.GetHeight() * scale);

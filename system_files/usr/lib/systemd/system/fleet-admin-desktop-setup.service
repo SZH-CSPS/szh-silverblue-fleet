@@ -1,7 +1,7 @@
-# Dépose le script change_password.sh à la racine du home d'admin, au premier boot.
+# Dépose le script post-install.sh à la racine du home d'admin, au premier boot.
 # Activé au build (build.sh). oneshot, une seule fois (stamp posé après).
 [Unit]
-Description=Dépose change_password.sh dans le home d'admin (1er boot)
+Description=Dépose post-install.sh dans le home d'admin (1er boot)
 ConditionPathExists=!/var/lib/fleet/admin-home-done
 After=multi-user.target
 
@@ -11,7 +11,7 @@ RemainAfterExit=yes
 ExecStartPre=/usr/bin/mkdir -p /var/lib/fleet
 # Si admin existe : installe le script à la racine du home (0700 : peut contenir des secrets
 # en clair → lisible/exécutable par admin uniquement).
-ExecStart=/usr/bin/bash -c 'id admin >/dev/null 2>&1 && install -o admin -g admin -m 0700 /usr/share/fleet/change_password.sh /home/admin/change_password.sh || true'
+ExecStart=/usr/bin/bash -c 'id admin >/dev/null 2>&1 && install -o admin -g admin -m 0700 /usr/share/fleet/post-install.sh /home/admin/post-install.sh || true'
 ExecStartPost=/usr/bin/touch /var/lib/fleet/admin-home-done
 
 [Install]

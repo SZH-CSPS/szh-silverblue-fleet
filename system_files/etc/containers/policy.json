@@ -1,7 +1,7 @@
 {
-    "_comment": "Imposition cosign ACTIVE pour la flotte : seules les images silverblue-x13 SIGNEES sont acceptees. Tout le reste reste permis (default). Cle publique : /etc/pki/containers/silverblue-x13.pub. Voir docs (repo prive) / RESTE-A-FAIRE section 4.",
+    "_comment": "Politique de confiance des images de conteneurs (flotte). (1) Les images de la flotte (standard + sysadmin) DOIVENT etre signees cosign — cle publique /etc/pki/containers/silverblue-x13.pub. (2) default=reject : on n'accepte plus n'importe quel registre ; seuls les registres ALLOWLISTES ci-dessous sont autorises (la regle la plus specifique gagne, donc l'allowlist ghcr.io n'affaiblit PAS l'exigence de signature des images de la flotte). Les transports locaux (builds podman, stockage local) restent permis. Voir docs / RESTE-A-FAIRE section 4.",
     "default": [
-        { "type": "insecureAcceptAnything" }
+        { "type": "reject" }
     ],
     "transports": {
         "docker": {
@@ -11,7 +11,41 @@
                     "keyPath": "/etc/pki/containers/silverblue-x13.pub",
                     "signedIdentity": { "type": "matchRepository" }
                 }
+            ],
+            "ghcr.io/szh-csps/silverblue-x13-sysadmin": [
+                {
+                    "type": "sigstoreSigned",
+                    "keyPath": "/etc/pki/containers/silverblue-x13.pub",
+                    "signedIdentity": { "type": "matchRepository" }
+                }
+            ],
+            "registry.fedoraproject.org": [
+                { "type": "insecureAcceptAnything" }
+            ],
+            "quay.io": [
+                { "type": "insecureAcceptAnything" }
+            ],
+            "docker.io": [
+                { "type": "insecureAcceptAnything" }
+            ],
+            "ghcr.io": [
+                { "type": "insecureAcceptAnything" }
             ]
+        },
+        "containers-storage": {
+            "": [ { "type": "insecureAcceptAnything" } ]
+        },
+        "dir": {
+            "": [ { "type": "insecureAcceptAnything" } ]
+        },
+        "oci": {
+            "": [ { "type": "insecureAcceptAnything" } ]
+        },
+        "oci-archive": {
+            "": [ { "type": "insecureAcceptAnything" } ]
+        },
+        "docker-archive": {
+            "": [ { "type": "insecureAcceptAnything" } ]
         },
         "docker-daemon": {
             "": [ { "type": "insecureAcceptAnything" } ]

@@ -51,7 +51,7 @@ chmod 0755 /usr/bin/kdrive
 # 5. Icône : récupérer celle de l'AppImage, sinon le .DirIcon.
 icon_dir="/usr/share/icons/hicolor/256x256/apps"
 mkdir -p "${icon_dir}"
-icon_src="$(find "${src}" -maxdepth 2 -name 'kdrive*.png' -o -maxdepth 2 -name 'kDrive*.png' 2>/dev/null | head -1 || true)"
+icon_src="$(find "${src}" -maxdepth 2 \( -name 'kdrive*.png' -o -name 'kDrive*.png' \) 2>/dev/null | head -1 || true)"
 if [ -z "${icon_src}" ] && [ -f "${src}/.DirIcon" ]; then
     icon_src="${src}/.DirIcon"
 fi

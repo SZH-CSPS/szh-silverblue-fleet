@@ -1,5 +1,7 @@
-# Flatpaks installés au premier démarrage par fleet-flatpak-sync (depuis Flathub).
-# Un identifiant par ligne. Les lignes vides et les commentaires (#) sont ignorés.
+# Flatpaks COMMUNS de la flotte, installés/synchronisés par fleet-flatpak-sync
+# (boot + quotidien, depuis Flathub). Un identifiant par ligne ; lignes vides et
+# commentaires (#) ignorés. Retirer une ligne → l'app est DÉSINSTALLÉE des postes
+# (prune, voir fleet-flatpak-sync). Le profil sysadmin ajoute 20-sysadmin.list.
 # Matrice complète et justifications : docs/04-applications.md.
 
 # --- Navigateur & mail ---

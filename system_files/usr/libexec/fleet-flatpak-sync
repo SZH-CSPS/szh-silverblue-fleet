@@ -1,28 +1,67 @@
 #!/usr/bin/env bash
 # =============================================================================
 #  fleet-flatpak-sync — installe/synchronise les Flatpaks de la flotte.
-#  Lancé par fleet-flatpak-setup.service (oneshot, après le réseau).
+#  Lancé par fleet-flatpak-setup.service (boot + timer quotidien).
+#
+#  Sources : TOUTES les listes /usr/share/fleet/flatpaks.d/*.list (ordre alphanum).
+#    10-standard.list  : commun à toute la flotte (dans l'image standard)
+#    20-sysadmin.list  : ajouté par l'image sysadmin (Containerfile.sysadmin)
+#
+#  Prune : les apps installées PAR CE SCRIPT lors d'un passage précédent
+#  (mémorisées dans /var/lib/fleet/flatpaks.state) et retirées des listes sont
+#  désinstallées. Les Flatpaks installés manuellement par l'utilisateur ne sont
+#  JAMAIS touchés (ils ne figurent pas dans le fichier d'état).
+#
 #  Idempotent : sûr à relancer (--or-update). Voir docs/04-applications.md.
 # =============================================================================
 set -uo pipefail
 
-LIST="/usr/share/fleet/flatpaks.list"
-[ -r "${LIST}" ] || { echo "Liste introuvable : ${LIST}" >&2; exit 0; }
+LIST_DIR="/usr/share/fleet/flatpaks.d"
+STATE_DIR="/var/lib/fleet"
+STATE_FILE="${STATE_DIR}/flatpaks.state"
+
+[ -d "${LIST_DIR}" ] || { echo "Répertoire introuvable : ${LIST_DIR}" >&2; exit 0; }
+mkdir -p "${STATE_DIR}"
 
 # Remote Flathub au niveau système (idempotent).
 flatpak remote-add --if-not-exists --system \
     flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 
+# 1. Ensemble désiré = union des listes (commentaires # et lignes vides ignorés).
+desired=()
+for list in "${LIST_DIR}"/*.list; do
+    [ -r "${list}" ] || continue
+    while IFS= read -r line; do
+        line="${line%%#*}"
+        line="$(echo "${line}" | tr -d '[:space:]')"
+        [ -z "${line}" ] && continue
+        desired+=("${line}")
+    done < "${list}"
+done
+
+# 2. Installation / mise à jour.
 rc=0
-while IFS= read -r line; do
-    line="${line%%#*}"                       # retire les commentaires
-    line="$(echo "${line}" | tr -d '[:space:]')"   # trim
-    [ -z "${line}" ] && continue
-    echo "→ ${line}"
-    if ! flatpak install --system --noninteractive --or-update flathub "${line}"; then
-        echo "  ÉCHEC : ${line}" >&2
+for app in "${desired[@]}"; do
+    echo "→ ${app}"
+    if ! flatpak install --system --noninteractive --or-update flathub "${app}"; then
+        echo "  ÉCHEC : ${app}" >&2
         rc=1
     fi
-done < "${LIST}"
+done
+
+# 3. Prune : retiré des listes ET présent dans l'état précédent → désinstallation.
+if [ -r "${STATE_FILE}" ]; then
+    while IFS= read -r old; do
+        [ -z "${old}" ] && continue
+        if ! printf '%s\n' "${desired[@]}" | grep -qxF "${old}"; then
+            echo "← retrait : ${old} (retiré des listes de la flotte)"
+            flatpak uninstall --system --noninteractive "${old}" || true
+        fi
+    done < "${STATE_FILE}"
+fi
+
+# 4. Nouvel état = listes courantes (écrit même si une installation a échoué :
+#    une app en échec sera retentée au prochain passage via les listes).
+printf '%s\n' "${desired[@]}" > "${STATE_FILE}"
 
 exit "${rc}"

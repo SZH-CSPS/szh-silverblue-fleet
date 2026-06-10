@@ -29,3 +29,13 @@ primary-color='#252b46'
 picture-uri='file:///usr/share/backgrounds/szh/szh-wallpaper-dark.png'
 picture-options='zoom'
 primary-color='#252b46'
+# Verrouillage automatique IMPOSÉ (clés verrouillées — voir locks/00-fleet-locks) :
+# session verrouillée dès l'extinction de l'écran.
+lock-enabled=true
+lock-delay=uint32 0
+
+[org/gnome/desktop/session]
+# Extinction de l'écran après 10 min d'inactivité (verrouillée : sans cela un
+# utilisateur pourrait mettre « jamais » et neutraliser le verrouillage auto).
+# Présentations/vidéos : les apps inhibent l'inactivité automatiquement.
+idle-delay=uint32 600

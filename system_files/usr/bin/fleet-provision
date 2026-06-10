@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# =============================================================================
+#  fleet-provision — provisioning ADMIN post-installation (à lancer UNE FOIS,
+#  en root, après l'installation du poste) :  sudo fleet-provision
+#
+#  1. Remplace la phrase de passe LUKS saisie dans l'installateur par la phrase
+#     DE SECOURS définitive (connue de l'admin seul, conservée au coffre).
+#  2. Dépose une clé d'enrôlement TEMPORAIRE (/var/lib/fleet/enroll.key, root 0600,
+#     stockée DANS le disque chiffré → aucune exposition au vol) qui autorisera
+#     l'enrôlement TPM au premier login : l'utilisateur n'aura qu'à CHOISIR SON
+#     PIN — il n'a jamais besoin de connaître la phrase de secours.
+#     La clé temporaire est RÉVOQUÉE (slot supprimé + fichier effacé) par le
+#     helper dès que l'enrôlement PIN a réussi.
+#
+#  Sans ce provisioning, l'assistant de premier login demande la phrase LUKS
+#  (mode de repli). Dépannage TPM : sudo fleet-tpm-enroll (docs/06).
+# =============================================================================
+set -euo pipefail
+
+if [ "$(id -u)" -ne 0 ]; then
+    echo "Lance ce script en root :  sudo fleet-provision" >&2
+    exit 1
+fi
+
+dev="$(blkid -t TYPE=crypto_LUKS -o device | head -1 || true)"
+if [ -z "${dev}" ]; then
+    echo "Aucune partition LUKS trouvée — le disque est-il chiffré ? (voir docs/06)" >&2
+    exit 1
+fi
+echo "Partition LUKS détectée : ${dev}"
+echo
+
+# --- 1. Phrase de secours -----------------------------------------------------
+read -rsp "Phrase de passe LUKS ACTUELLE (celle de l'installateur) : " cur; echo
+read -rsp "NOUVELLE phrase de secours : " new1; echo
+read -rsp "Confirmer la phrase de secours : " new2; echo
+if [ "${new1}" != "${new2}" ]; then
+    echo "Les phrases ne correspondent pas — abandon (rien n'a été modifié)." >&2
+    exit 1
+fi
+if [ "${#new1}" -lt 12 ]; then
+    echo "Phrase de secours trop courte (min. 12 caractères) — abandon." >&2
+    exit 1
+fi
+
+if [ "${cur}" = "${new1}" ]; then
+    echo "→ Phrase inchangée (identique à l'actuelle)."
+else
+    printf '%s' "${new1}" | cryptsetup luksChangeKey "${dev}" \
+        --key-file=<(printf '%s' "${cur}")
+    echo "✓ Phrase de secours en place (l'ancienne phrase d'installation est révoquée)."
+fi
+
+# --- 2. Clé d'enrôlement temporaire (premier login = PIN seulement) ------------
+mkdir -p /var/lib/fleet
+keyfile="/var/lib/fleet/enroll.key"
+if [ -f "${keyfile}" ]; then
+    # Re-provisioning : révoque l'ancienne clé temporaire avant d'en créer une autre.
+    cryptsetup luksRemoveKey "${dev}" "${keyfile}" 2>/dev/null || true
+    rm -f "${keyfile}"
+fi
+(umask 077; head -c 64 /dev/urandom > "${keyfile}")
+cryptsetup luksAddKey "${dev}" "${keyfile}" \
+    --key-file=<(printf '%s' "${new1}")
+# L'assistant de premier login doit pouvoir reproposer l'enrôlement.
+rm -f /var/lib/fleet/tpm-enrolled
+
+cat <<EON
+
+✓ Provisioning terminé pour ${dev}.
+  • Au PREMIER LOGIN, l'utilisateur choisira simplement son PIN (dialogue GNOME) ;
+    la clé temporaire sera alors automatiquement révoquée.
+  • Conserve la phrase de secours au coffre : c'est l'unique secours si le TPM
+    refuse (changement firmware/Secure Boot, 3 PIN erronés → saisie de la phrase).
+  • Vérifier les slots :  cryptsetup luksDump ${dev}
+EON

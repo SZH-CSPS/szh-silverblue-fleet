@@ -12,7 +12,6 @@ set -euxo pipefail
 #   greenboot (+default-health-checks) : auto-rollback si un boot post-MAJ échoue
 #   gnome-shell-extension-appindicator : zone de notification GNOME (tray kDrive)
 #   tpm2-tools                         : diagnostic TPM pour le chiffrement LUKS
-#   plymouth-plugin-script             : module « script » requis par le thème de boot szh
 #
 # Gestion d'énergie : on GARDE le défaut Fedora (tuned + tuned-ppd, déjà dans la base et
 # activé). Le sélecteur de profil d'énergie GNOME fonctionne nativement. Pas de TLP.
@@ -24,23 +23,41 @@ rpm-ostree install \
     greenboot \
     greenboot-default-health-checks \
     gnome-shell-extension-appindicator \
-    tpm2-tools \
-    plymouth-plugin-script
+    tpm2-tools
+
+# zenity : requis par l'assistant TPM+PIN du premier login (fleet-tpm-pin-setup).
+# Installation CONDITIONNELLE : déjà présent dans certaines bases GNOME → un
+# rpm-ostree install inconditionnel casserait sur « already provided ».
+rpm -q zenity >/dev/null 2>&1 || rpm-ostree install zenity
 
 ### 2. Services systemd -------------------------------------------------------
 # Gestion d'énergie = défaut Fedora : tuned + tuned-ppd (sélecteur de profil GNOME natif).
 # tuned est activé par défaut dans la base depuis F41 ; on l'assure par sûreté.
 systemctl enable tuned.service 2>/dev/null || true
 
-# Installe/synchronise les Flatpaks par défaut au démarrage (unité + script fournis).
+# Installe/synchronise les Flatpaks de la flotte : au boot + chaque jour (timer).
 systemctl enable fleet-flatpak-setup.service
-
-# Enrolement TPM2 du LUKS au premier boot (saisie passphrase sur console ; docs/06).
-# No-op propre si le disque n'est pas chiffre ou s'il n'y a pas de TPM.
-systemctl enable fleet-tpm-enroll.service
+systemctl enable fleet-flatpak-setup.timer
 
 # Force le changement du mot de passe initial de szh au premier login (docs).
 systemctl enable fleet-force-passwd-change.service
+
+# Enrôlement TPM2+PIN du LUKS : proposé en GRAPHIQUE au premier login de session
+# (autostart fleet-tpm-pin-setup + helper polkit). Parcours flotte : l'admin lance
+# « sudo fleet-provision » après l'installation (phrase de secours + clé temporaire)
+# → l'utilisateur n'a plus qu'à choisir son PIN au premier login.
+# CLI admin de dépannage : sudo fleet-tpm-enroll (docs/06).
+
+### 2a. Mises à jour automatiques de l'OS (rpm-ostree → bootc) -----------------
+# L'image est reconstruite chaque nuit (CI) avec les correctifs Fedora ; le démon
+# rpm-ostree les TÉLÉCHARGE et les PRÉPARE automatiquement sur les postes
+# (AutomaticUpdatePolicy=stage dans /etc/rpm-ostree.conf, déposé via system_files).
+# Application au redémarrage suivant, sous protection greenboot (rollback auto).
+systemctl enable rpm-ostreed-automatic.timer
+
+# sshd : pas de service SSH entrant sur les postes de la flotte (défaut Fedora
+# Workstation = désactivé ; on l'assure explicitement — durcissement docs/06).
+systemctl disable sshd.service 2>/dev/null || true
 
 ### 2b. greenboot (auto-rollback santé) --------------------------------------
 # Active la chaîne greenboot. Boucle + garde : un unit absent selon la version ne doit
@@ -58,24 +75,23 @@ done
 systemctl enable fwupd-refresh.timer 2>/dev/null || true
 
 ### 2d. Défauts GNOME (dconf) -------------------------------------------------
-# Compile la base dconf système (profil + clés déposés via system_files) : active
-# l'extension AppIndicator par défaut (tray kDrive). Détails : docs/04.
+# Compile la base dconf système (profil + clés + locks déposés via system_files) :
+# extension AppIndicator par défaut (tray kDrive) + verrouillage d'écran automatique
+# IMPOSÉ (clés verrouillées dans local.d/locks/00-fleet-locks). Détails : docs/04.
 dconf update || true
 
-### 2e. Splash Plymouth (thème szh) ------------------------------------------
-# Thème de boot déposé dans /usr/share/plymouth/themes/szh (+ plymouth-plugin-script).
-# On le définit par défaut. ATTENTION : sur une image ostree/bootc, le thème n'apparaît
-# au boot QUE s'il est embarqué dans l'initramfs. Or régénérer l'initramfs DANS le build
-# conteneur s'est révélé non fiable (module « ostree » non garanti → risque de non-boot,
-# attrapé par un garde-fou lsinitrd). On NE régénère donc PAS ici : l'image conserve
-# l'initramfs Fedora éprouvé → boot fiable. Le thème reste prêt ; pour l'activer vraiment,
-# régénérer l'initramfs CÔTÉ POSTE (sur vrai matériel dracut inclut bien ostree) — à
-# valider sur un poste test (voir RESTE-A-FAIRE).
-plymouth-set-default-theme szh || true
+### 2e. Splash de boot --------------------------------------------------------
+# Pas de thème Plymouth personnalisé : on garde le splash Fedora par défaut
+# (fiable, déjà dans l'initramfs — pas de régénération risquée au build).
+# Les kargs « rhgb quiet » (usr/lib/bootc/kargs.d/10-fleet.toml) garantissent le
+# splash graphique, y compris le prompt LUKS/PIN graphique au boot.
 
 ### 3. Permissions ------------------------------------------------------------
+chmod +x /usr/bin/fleet-provision
 chmod +x /usr/libexec/fleet-flatpak-sync
 chmod +x /usr/libexec/fleet-tpm-enroll
+chmod +x /usr/libexec/fleet-tpm-enroll-helper
+chmod +x /usr/libexec/fleet-tpm-pin-setup
 chmod +x /etc/greenboot/check/wanted.d/20-fleet-network.sh
 
 ### 3b. kDrive (AppImage pré-extraite + wrapper natif) ------------------------

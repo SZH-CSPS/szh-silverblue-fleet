@@ -17,6 +17,16 @@
       datasourceTemplate: "docker",
       versioningTemplate: "loose",
     },
+    {
+      // Conteneur distrobox « pipeline » : suit le tag fedora de pipeline.ini
+      // pour rester aligné sur la version de la base (évite la dérive / EOL).
+      customType: "regex",
+      managerFilePatterns: ["/(^|/)pipeline\\.ini$/"],
+      matchStrings: ["image=registry\\.fedoraproject\\.org/fedora:(?<currentValue>\\d+)"],
+      depNameTemplate: "registry.fedoraproject.org/fedora",
+      datasourceTemplate: "docker",
+      versioningTemplate: "loose",
+    },
     // kDrive : PAS d'auto-bump. Le nom de l'AppImage porte une version a 4 segments
     // (ex. 3.8.2.6) dont le dernier est un build interne Infomaniak, ABSENT des tags
     // GitHub (3 segments, ex. 3.8.5). Renovate ne peut donc pas produire une URL qui

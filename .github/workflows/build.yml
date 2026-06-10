@@ -11,8 +11,15 @@ on:
     - cron: '0 5 * * *'
   workflow_dispatch: {}
 
+# Sérialise les builds (push + cron) : évite qu'un build concurrent remplace
+# « latest » entre le push et la signature.
+concurrency:
+  group: build-push
+  cancel-in-progress: false
+
 env:
   IMAGE_NAME: silverblue-x13
+  IMAGE_NAME_SYSADMIN: silverblue-x13-sysadmin
 
 jobs:
   build:
@@ -22,25 +29,42 @@ jobs:
       packages: write          # nécessaire pour pousser vers ghcr.io
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - name: Définir le registre (ghcr exige des minuscules)
-        run: echo "IMAGE_REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+      - name: Définir registre + tags
+        run: |
+          echo "IMAGE_REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+          # Tag daté <fedora>.<AAAAMMJJ> (ex. 44.20260610) : permet d'épingler un poste
+          # sur une version connue et de cibler un rollback via `bootc switch`.
+          FEDORA_VERSION=$(grep -oP '^ARG FEDORA_VERSION=\K\d+' Containerfile)
+          echo "DATE_TAG=${FEDORA_VERSION}.$(date +%Y%m%d)" >> "$GITHUB_ENV"
 
-      - name: Build image (buildah, depuis le Containerfile)
-        id: build
+      # --- Image standard ----------------------------------------------------
+      - name: Build image standard (buildah)
         uses: redhat-actions/buildah-build@v2
         with:
           image: ${{ env.IMAGE_NAME }}
-          tags: latest ${{ github.sha }}
+          tags: latest ${{ github.sha }} ${{ env.DATE_TAG }}
           containerfiles: ./Containerfile
           oci: true
-          # Variable de dépôt KDRIVE_URL (Settings → Secrets and variables → Actions →
-          # Variables) = MOTIF d'URL de l'AppImage kDrive avec %VERSION% à la place du
-          # numéro (ex. https://.../kDrive-%VERSION%-amd64.AppImage). La version vient de
-          # l'ARG KDRIVE_VERSION du Containerfile (monté par Renovate). Vide → kDrive omis.
+          # Variable de dépôt KDRIVE_URL = MOTIF d'URL de l'AppImage kDrive avec
+          # %VERSION% (la version vient de l'ARG KDRIVE_VERSION). Vide → kDrive omis.
           build-args: |
             KDRIVE_URL=${{ vars.KDRIVE_URL }}
+
+      # --- Image sysadmin (dérivée de la standard locale → couches partagées) -
+      - name: Build image sysadmin (buildah)
+        uses: redhat-actions/buildah-build@v2
+        with:
+          image: ${{ env.IMAGE_NAME_SYSADMIN }}
+          tags: latest ${{ github.sha }} ${{ env.DATE_TAG }}
+          containerfiles: ./Containerfile.sysadmin
+          oci: true
+          # Dérive de l'image standard FRAÎCHEMENT construite (stockage local) :
+          # garantit que les couches de base sont IDENTIQUES (partage sur le registre
+          # et sur les postes — un poste qui a les deux profils ne télécharge que le delta).
+          build-args: |
+            BASE=localhost/${{ env.IMAGE_NAME }}:latest
 
       - name: Login ghcr.io
         uses: redhat-actions/podman-login@v1
@@ -49,31 +73,41 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push
+      - name: Push standard
+        id: push-standard
         uses: redhat-actions/push-to-registry@v2
         with:
           image: ${{ env.IMAGE_NAME }}
-          tags: latest ${{ github.sha }}
+          tags: latest ${{ github.sha }} ${{ env.DATE_TAG }}
+          registry: ${{ env.IMAGE_REGISTRY }}
+
+      - name: Push sysadmin
+        id: push-sysadmin
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          image: ${{ env.IMAGE_NAME_SYSADMIN }}
+          tags: latest ${{ github.sha }} ${{ env.DATE_TAG }}
           registry: ${{ env.IMAGE_REGISTRY }}
 
       # --- Signature cosign (activable via la variable de dépôt COSIGN_ENABLED=true) ---
-      # Prérequis : voir docs/06 (générer la paire de clés, ajouter les secrets SIGNING_SECRET
-      # + SIGNING_SECRET_PASSWORD, committer la clé publique). Tant que COSIGN_ENABLED ≠ true,
-      # ces étapes sont ignorées (aucun impact sur le build).
+      # Prérequis : voir docs/06 (paire de clés, secrets SIGNING_SECRET +
+      # SIGNING_SECRET_PASSWORD, clé publique committée). On signe le DIGEST retourné
+      # par l'étape de push (pas une résolution ultérieure de « latest » → pas de
+      # course possible avec un autre build).
       - name: Installer cosign
         if: ${{ vars.COSIGN_ENABLED == 'true' }}
         uses: sigstore/cosign-installer@v3
 
-      - name: Signer l'image (par digest)
+      - name: Signer les images (par digest)
         if: ${{ vars.COSIGN_ENABLED == 'true' }}
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
           COSIGN_PASSWORD: ${{ secrets.SIGNING_SECRET_PASSWORD }}
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq skopeo
-          DIGEST=$(skopeo inspect --format '{{.Digest}}' "docker://${IMAGE_REGISTRY}/${IMAGE_NAME}:latest")
-          echo "Signature de ${IMAGE_REGISTRY}/${IMAGE_NAME}@${DIGEST}"
-          cosign sign -y --key env://COSIGN_PRIVATE_KEY "${IMAGE_REGISTRY}/${IMAGE_NAME}@${DIGEST}"
+          cosign sign -y --key env://COSIGN_PRIVATE_KEY \
+            "${IMAGE_REGISTRY}/${IMAGE_NAME}@${{ steps.push-standard.outputs.digest }}"
+          cosign sign -y --key env://COSIGN_PRIVATE_KEY \
+            "${IMAGE_REGISTRY}/${IMAGE_NAME_SYSADMIN}@${{ steps.push-sysadmin.outputs.digest }}"
 
 # -----------------------------------------------------------------------------
 # Variante registre AUTO-HÉBERGÉ (Forgejo) au lieu de ghcr.io :

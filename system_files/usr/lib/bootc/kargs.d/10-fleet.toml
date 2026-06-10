@@ -1,11 +1,14 @@
 # Arguments noyau de la flotte, appliqués par bootc (usr/lib/bootc/kargs.d/*.toml).
-# Volontairement VIDE : aucun karg imposé par défaut. Les modifier ici les versionne
-# avec l'image (cohérent sur toute la flotte) plutôt que via grubby poste par poste.
+# Les modifier ici les versionne avec l'image (cohérent sur toute la flotte)
+# plutôt que via grubby poste par poste.
 #
-# Exemples (décommenter au besoin) :
-#   kargs = ["quiet", "splash"]                 # boot silencieux + splash Plymouth
-#   kargs = ["mitigations=auto"]                # politique de mitigations CPU
+# rhgb + quiet : boot graphique silencieux → Plymouth (thème Fedora par défaut)
+# affiche le prompt LUKS/PIN en graphique. Sans rhgb, le prompt fonctionne aussi,
+# mais en mode texte.
 #
-# Filtrer par architecture si nécessaire :
-#   match-architectures = ["x86_64"]
-kargs = []
+# Mitigations CPU : on garde le défaut du noyau (mitigations=auto). N'ajouter
+# "mitigations=auto,nosmt" (désactive l'hyperthreading, ~-20/30 % multi-thread)
+# que si une politique de sécurité l'exige explicitement.
+#
+# Filtrer par architecture si nécessaire :  match-architectures = ["x86_64"]
+kargs = ["rhgb", "quiet"]

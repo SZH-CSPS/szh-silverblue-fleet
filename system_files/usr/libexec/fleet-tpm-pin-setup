@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# =============================================================================
+#  fleet-tpm-pin-setup — assistant GRAPHIQUE d'enrôlement TPM2+PIN (premier login).
+#  Lancé en session utilisateur via /etc/xdg/autostart/fleet-tpm-pin-setup.desktop.
+#
+#  Poste PROVISIONNÉ (sudo fleet-provision déjà passé → /var/lib/fleet/enroll.key) :
+#    l'utilisateur choisit SEULEMENT son PIN. C'est le parcours normal de la flotte.
+#  Poste non provisionné (repli) : la phrase LUKS est demandée en plus.
+#
+#  Silencieux (exit 0 immédiat) si : déjà enrôlé (stamp), pas de TPM, pas de LUKS,
+#  pas de zenity. « Plus tard » → re-proposé au prochain login (pas de stamp).
+#  La partie privilégiée est déléguée à fleet-tpm-enroll-helper via pkexec
+#  (polkit auth_self : l'utilisateur confirme avec SON mot de passe de session).
+# =============================================================================
+set -uo pipefail
+
+STAMP="/var/lib/fleet/tpm-enrolled"
+KEYFILE="/var/lib/fleet/enroll.key"
+HELPER="/usr/libexec/fleet-tpm-enroll-helper"
+
+[ -e "${STAMP}" ] && exit 0
+command -v zenity >/dev/null 2>&1 || exit 0
+{ [ -e /dev/tpmrm0 ] || [ -e /dev/tpm0 ]; } || exit 0
+lsblk -rno FSTYPE 2>/dev/null | grep -q '^crypto_LUKS$' || exit 0
+
+provisioned="no"
+[ -e "${KEYFILE}" ] && provisioned="yes"
+
+# Laisse la session se poser avant d'afficher le dialogue.
+sleep 10
+
+if [ "${provisioned}" = "yes" ]; then
+    intro="Choisissez un <b>PIN</b> (min. 6 caractères) : il vous sera demandé à chaque démarrage pour déverrouiller le disque chiffré de ce poste.\n\nC'est tout — aucune autre information n'est nécessaire."
+else
+    intro="Ce poste peut déverrouiller son disque chiffré au démarrage avec un <b>PIN court</b> à la place de la phrase de passe complète.\n\nVous aurez besoin de :\n  • la phrase de passe actuelle du disque\n  • un PIN de votre choix (min. 6 caractères)"
+fi
+
+zenity --question --width=460 \
+    --title="Déverrouillage du disque" \
+    --text="${intro}" \
+    --ok-label="Configurer maintenant" --cancel-label="Plus tard" || exit 0
+
+luks_pass=""
+if [ "${provisioned}" != "yes" ]; then
+    luks_pass="$(zenity --password --title="Phrase de passe actuelle du disque (LUKS)")" || exit 0
+    [ -n "${luks_pass}" ] || exit 0
+fi
+
+pin=""
+for _ in 1 2 3; do
+    p1="$(zenity --password --title="Choisir un PIN (min. 6 caractères)")" || exit 0
+    if [ "${#p1}" -lt 6 ]; then
+        zenity --error --width=320 --text="PIN trop court (minimum 6 caractères)."
+        continue
+    fi
+    p2="$(zenity --password --title="Confirmer le PIN")" || exit 0
+    if [ "${p1}" = "${p2}" ]; then
+        pin="${p1}"
+        break
+    fi
+    zenity --error --width=320 --text="Les deux PIN ne correspondent pas."
+done
+[ -n "${pin}" ] || exit 0
+
+# Secrets transmis via STDIN (jamais en argument). pkexec déclenche la
+# confirmation polkit (mot de passe de session de l'utilisateur).
+if [ "${provisioned}" = "yes" ]; then
+    out="$(printf '%s\n' "${pin}" | pkexec "${HELPER}" 2>&1)"; rc=$?
+else
+    out="$(printf '%s\n%s\n' "${luks_pass}" "${pin}" | pkexec "${HELPER}" 2>&1)"; rc=$?
+fi
+
+if [ "${rc}" -eq 0 ]; then
+    zenity --info --width=420 \
+        --title="Déverrouillage du disque configuré" \
+        --text="Terminé. Au prochain démarrage, le disque demandera votre <b>PIN</b>.\n\nEn cas de PIN oublié ou de changement matériel, l'administrateur dispose d'une phrase de secours."
+else
+    zenity --error --width=460 \
+        --title="Échec de la configuration" \
+        --text="La configuration a échoué :\n\n${out}\n\nL'assistant sera reproposé au prochain login. (Admins : sudo fleet-tpm-enroll)"
+fi

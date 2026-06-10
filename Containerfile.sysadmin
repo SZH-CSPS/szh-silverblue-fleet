@@ -1,0 +1,26 @@
+# =============================================================================
+#  Containerfile.sysadmin — profil « sysadmin » de la flotte.
+#
+#  DÉRIVE de l'image standard (modèle universal-blue : bluefin → bluefin-dx) :
+#  les couches de base sont partagées ; ce build n'ajoute que les outils sysadmin
+#  (RPM) et la liste Flatpak supplémentaire. Un poste bascule de profil avec :
+#      bootc switch ghcr.io/szh-csps/silverblue-x13-sysadmin:latest
+#  (atomique, réversible par bootc rollback / switch inverse).
+#
+#  Build local :
+#    podman build -t silverblue-x13 .
+#    podman build -f Containerfile.sysadmin \
+#                 --build-arg BASE=localhost/silverblue-x13:latest \
+#                 -t silverblue-x13-sysadmin .
+#  En CI, BASE pointe sur l'image standard fraîchement construite (build.yml).
+# =============================================================================
+ARG BASE=ghcr.io/szh-csps/silverblue-x13:latest
+FROM ${BASE}
+
+# Fichiers propres au profil (liste Flatpak sysadmin), puis scripts de build.
+COPY system_files_sysadmin/ /
+COPY build_files/ /tmp/build_files/
+
+RUN bash /tmp/build_files/build-sysadmin.sh
+
+RUN bootc container lint

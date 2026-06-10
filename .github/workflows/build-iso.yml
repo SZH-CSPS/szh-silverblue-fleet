@@ -6,13 +6,24 @@ name: Build ISO d'installation (manuel)
 on:
   workflow_dispatch:
     inputs:
+      image:
+        description: "Profil à graver dans l'ISO"
+        type: choice
+        default: silverblue-x13
+        options:
+          - silverblue-x13
+          - silverblue-x13-sysadmin
       tag:
         description: "Tag de l'image à graver dans l'ISO"
         default: latest
         required: true
 
+# bootc-image-builder : épingler de préférence par DIGEST pour des ISO reproductibles.
+# Récupérer le digest courant :
+#   skopeo inspect --format '{{.Digest}}' docker://quay.io/centos-bootc/bootc-image-builder:latest
+# puis remplacer la valeur par : quay.io/centos-bootc/bootc-image-builder@sha256:<digest>
 env:
-  IMAGE_NAME: silverblue-x13
+  BIB_IMAGE: quay.io/centos-bootc/bootc-image-builder:latest
 
 jobs:
   build-iso:
@@ -22,7 +33,7 @@ jobs:
       packages: read        # lecture de l'image sur ghcr (utile si package privé)
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Définir le registre (ghcr exige des minuscules)
         run: echo "IMAGE_REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
@@ -35,7 +46,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pré-tirer l'image (pour le stockage local partagé avec BIB)
-        run: sudo podman pull "${IMAGE_REGISTRY}/${IMAGE_NAME}:${{ inputs.tag }}"
+        run: sudo podman pull "${IMAGE_REGISTRY}/${{ inputs.image }}:${{ inputs.tag }}"
 
       - name: Construire l'ISO (bootc-image-builder)
         run: |
@@ -45,15 +56,15 @@ jobs:
             -v "${PWD}/bootc-image-builder/config.toml:/config.toml:ro" \
             -v "${PWD}/output:/output" \
             -v /var/lib/containers/storage:/var/lib/containers/storage \
-            quay.io/centos-bootc/bootc-image-builder:latest \
+            "${BIB_IMAGE}" \
               --type anaconda-iso \
               --rootfs btrfs \
               --config /config.toml \
-              "${IMAGE_REGISTRY}/${IMAGE_NAME}:${{ inputs.tag }}"
+              "${IMAGE_REGISTRY}/${{ inputs.image }}:${{ inputs.tag }}"
 
       - name: Publier l'ISO en artefact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
-          name: silverblue-x13-install-iso
+          name: ${{ inputs.image }}-install-iso
           path: output/**/*.iso
           if-no-files-found: error

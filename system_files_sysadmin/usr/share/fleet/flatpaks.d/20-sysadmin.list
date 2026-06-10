@@ -1,0 +1,58 @@
+# Flatpaks SUPPLÉMENTAIRES du profil sysadmin (en plus de 10-standard.list).
+# Équivalents Linux de la liste d'installation Windows (liste-installation.md).
+# Un identifiant par ligne ; lignes vides et commentaires (#) ignorés.
+# Retirer une ligne → désinstallation au prochain passage (prune).
+
+# --- Navigateur (LibreWolf + Thunderbird + Proton déjà dans 10-standard) ---
+org.mozilla.firefox                  # audit a11y (second navigateur)
+
+# --- Cloud / sync (kDrive = natif dans l'image) ---
+com.dropbox.Client                   # Dropbox
+# OneDrive : pas de client officiel Linux → GNOME Online Accounts (intégré) ou
+# client abraunegg (COPR) — voir docs/04.
+
+# --- Création / chaîne éditoriale (équiv. Adobe CC ; Pandoc+Ghostscript = distrobox pipeline) ---
+org.gimp.GIMP                        # retouche image (≈ Photoshop)
+org.inkscape.Inkscape                # vectoriel (≈ Illustrator)
+net.scribus.Scribus                  # PAO (≈ InDesign)
+org.darktable.Darktable              # photo RAW (≈ Lightroom)
+
+# --- Accessibilité / QA ---
+org.gnome.design.Contrast            # vérif. contrastes (≈ Colour Contrast Analyser)
+# PAC (axes4) : Windows uniquement — pas d'équivalent Linux complet (vérifier veraPDF).
+
+# --- Code / conteneurs (VS Code + git/podman déjà présents) ---
+io.podman_desktop.PodmanDesktop      # Podman Desktop
+# com.vscodium.codium                # VSCodium (alternative sans télémétrie à VS Code)
+
+# --- Sécurité / clés (gnupg2 natif ; ykman CLI = RPM) ---
+com.yubico.yubioath                  # Yubico Authenticator
+org.gnome.seahorse.Application       # gestion de clés GPG/SSH (≈ Gpg4win/Kleopatra)
+# Proton Authenticator : pas de Flatpak officiel sur Flathub → web ou mobile.
+# VeraCrypt : pas de Flatpak officiel → RPM upstream veracrypt.fr (manuel, docs/04).
+
+# --- CAO & impression 3D ---
+com.bambulab.BambuStudio             # Bambu Studio
+org.openscad.OpenSCAD                # OpenSCAD
+org.freecad.FreeCAD                  # FreeCAD
+
+# --- Capture, notes & diagrammes (SumatraPDF ≈ Papers, déjà standard) ---
+org.flameshot.Flameshot              # capture annotée (≈ ShareX)
+com.jgraph.drawio.desktop            # draw.io
+md.obsidian.Obsidian                 # Obsidian
+
+# --- Médias & photo (VLC déjà standard) ---
+org.audacityteam.Audacity            # Audacity
+io.github.quodlibet.QuodLibet        # Quod Libet
+
+# --- Messagerie privée ---
+org.signal.Signal                    # Signal
+im.riot.Riot                         # Element (Matrix)
+
+# --- Réseau (Wireshark = RPM dans le profil, meilleure capture) ---
+
+# --- Pédagogie ---
+net.ankiweb.Anki                     # Anki
+
+# --- Utilitaires (7-Zip CLI = RPM p7zip ; PowerToys sans objet sous GNOME) ---
+io.github.cboxdoerfer.FSearch        # recherche fichiers instantanée (≈ Everything)

@@ -1,0 +1,12 @@
+# Déclenche la synchronisation Flatpak quotidienne (en plus de l'exécution au boot).
+# Persistent=true : rattrape une échéance manquée (poste éteint) au démarrage suivant.
+[Unit]
+Description=Synchronisation quotidienne des Flatpaks de la flotte
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=1h
+
+[Install]
+WantedBy=timers.target

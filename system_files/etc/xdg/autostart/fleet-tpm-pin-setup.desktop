@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Configuration du déverrouillage du disque
+Comment=Propose l'enrôlement TPM2+PIN du disque chiffré au premier login (flotte)
+Exec=/usr/libexec/fleet-tpm-pin-setup
+OnlyShowIn=GNOME;
+NoDisplay=true
+X-GNOME-Autostart-Delay=20

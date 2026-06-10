@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# =============================================================================
+#  fleet-tpm-enroll-helper — partie ROOT de l'enrôlement TPM2+PIN du LUKS.
+#  Appelé via pkexec par l'assistant graphique fleet-tpm-pin-setup (premier login).
+#  Autorisation : polkit (actions/ch.szh.fleet.tpm-enroll.policy, auth_self).
+#
+#  Deux modes (secrets lus sur STDIN — jamais en argument, invisibles dans /proc) :
+#    • Poste PROVISIONNÉ (sudo fleet-provision → /var/lib/fleet/enroll.key) :
+#        stdin = PIN seul. La clé temporaire autorise l'enrôlement, puis est
+#        RÉVOQUÉE (slot LUKS supprimé + fichier effacé). L'utilisateur n'a
+#        jamais besoin de la phrase de secours.
+#    • Poste NON provisionné (repli) :
+#        stdin = phrase LUKS puis PIN (2 lignes).
+#
+#  Enrôle TPM2 (PCR 7) + PIN, remplace un éventuel slot TPM2 existant
+#  (--wipe-slot=tpm2 → pas de slots dupliqués), pose le stamp de flotte.
+# =============================================================================
+set -euo pipefail
+
+KEYFILE="/var/lib/fleet/enroll.key"
+
+if [ "$(id -u)" -ne 0 ]; then
+    echo "ERREUR : doit être lancé en root (via pkexec)." >&2
+    exit 1
+fi
+
+dev="$(blkid -t TYPE=crypto_LUKS -o device | head -1 || true)"
+if [ -z "${dev}" ]; then
+    echo "ERREUR : aucune partition LUKS trouvée (disque non chiffré ?)." >&2
+    exit 2
+fi
+if [ ! -e /dev/tpmrm0 ] && [ ! -e /dev/tpm0 ]; then
+    echo "ERREUR : aucun TPM2 détecté." >&2
+    exit 3
+fi
+
+# systemd-cryptenroll lit le nouveau secret (ici le PIN) dans $NEWPASSWORD et,
+# en mode repli, la phrase existante dans $PASSWORD (man systemd-cryptenroll).
+if [ -f "${KEYFILE}" ]; then
+    # Mode provisionné : PIN seul sur stdin.
+    IFS= read -r pin || { echo "ERREUR : PIN absent sur stdin." >&2; exit 64; }
+    export NEWPASSWORD="${pin}"
+    systemd-cryptenroll --unlock-key-file="${KEYFILE}" --wipe-slot=tpm2 \
+        --tpm2-device=auto --tpm2-pcrs=7 --tpm2-with-pin=yes "${dev}"
+    unset NEWPASSWORD
+    # Révoque la clé temporaire : slot LUKS supprimé, fichier effacé.
+    cryptsetup luksRemoveKey "${dev}" "${KEYFILE}" || true
+    rm -f "${KEYFILE}"
+else
+    # Mode repli : phrase LUKS + PIN sur stdin.
+    IFS= read -r luks_pass || { echo "ERREUR : phrase de passe absente sur stdin." >&2; exit 64; }
+    IFS= read -r pin       || { echo "ERREUR : PIN absent sur stdin." >&2; exit 64; }
+    export PASSWORD="${luks_pass}"
+    export NEWPASSWORD="${pin}"
+    systemd-cryptenroll --wipe-slot=tpm2 \
+        --tpm2-device=auto --tpm2-pcrs=7 --tpm2-with-pin=yes "${dev}"
+    unset PASSWORD NEWPASSWORD
+fi
+
+mkdir -p /var/lib/fleet
+touch /var/lib/fleet/tpm-enrolled
+echo "OK : déverrouillage TPM2+PIN enrôlé sur ${dev} (PCR 7)."

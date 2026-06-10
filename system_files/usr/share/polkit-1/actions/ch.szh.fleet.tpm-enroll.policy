@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC
+ "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1.0/policyconfig.dtd">
+<policyconfig>
+  <!-- Autorise l'assistant de premier login (session active, y c. utilisateur
+       non-wheel comme « szh ») à lancer le helper d'enrôlement TPM2+PIN après
+       confirmation de SON PROPRE mot de passe (auth_self). La vraie barrière de
+       sécurité reste la phrase de passe LUKS, exigée par systemd-cryptenroll. -->
+  <action id="ch.szh.fleet.tpm-enroll">
+    <description>Enrôler le déverrouillage TPM2+PIN du disque chiffré</description>
+    <description xml:lang="fr">Enrôler le déverrouillage TPM2+PIN du disque chiffré</description>
+    <message>Authentication is required to configure disk unlocking</message>
+    <message xml:lang="fr">Authentifiez-vous pour configurer le déverrouillage du disque</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_self</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/fleet-tpm-enroll-helper</annotate>
+  </action>
+</policyconfig>

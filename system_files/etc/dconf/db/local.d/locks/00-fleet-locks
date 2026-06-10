@@ -1,0 +1,6 @@
+# Clés dconf VERROUILLÉES (l'utilisateur ne peut pas les modifier).
+# Politique de flotte : le verrouillage automatique de session ne doit pas
+# pouvoir être désactivé. Compilé par `dconf update` au build.
+/org/gnome/desktop/screensaver/lock-enabled
+/org/gnome/desktop/screensaver/lock-delay
+/org/gnome/desktop/session/idle-delay

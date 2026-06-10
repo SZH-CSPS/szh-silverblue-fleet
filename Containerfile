@@ -15,9 +15,9 @@
 # =============================================================================
 
 # Base Silverblue. Le tag est piloté par Renovate (voir .github/renovate.json5).
-# Confirme la stable courante : skopeo inspect docker://quay.io/fedora/fedora-silverblue:42
+# Vérifier les tags disponibles : skopeo list-tags docker://quay.io/fedora/fedora-silverblue
 ARG BASE_IMAGE=quay.io/fedora/fedora-silverblue
-ARG FEDORA_VERSION=44 
+ARG FEDORA_VERSION=44
 FROM ${BASE_IMAGE}:${FEDORA_VERSION}
 
 # --- kDrive (optionnel) ------------------------------------------------------

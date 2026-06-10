@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
 # =============================================================================
 #  fleet-flatpak-sync — installe/synchronise les Flatpaks de la flotte.
-#  Lancé par fleet-flatpak-setup.service (boot + timer quotidien).
+#  Lancé par fleet-flatpak-setup.service (boot, avec réessai auto en échec)
+#  et redéclenché chaque jour par fleet-flatpak-setup.timer.
 #
 #  Sources : TOUTES les listes /usr/share/fleet/flatpaks.d/*.list (ordre alphanum).
 #    10-standard.list  : commun à toute la flotte (dans l'image standard)
 #    20-sysadmin.list  : ajouté par l'image sysadmin (Containerfile.sysadmin)
+#
+#  Réseau : network-online.target peut être atteint avant que le WiFi/DNS soit
+#  réellement prêt (1er boot) → test de joignabilité de Flathub ; en échec on sort
+#  non-zéro et le service relance (Restart=on-failure) ~2 min plus tard.
 #
 #  Prune : les apps installées PAR CE SCRIPT lors d'un passage précédent
 #  (mémorisées dans /var/lib/fleet/flatpaks.state) et retirées des listes sont
@@ -19,13 +24,19 @@ set -uo pipefail
 LIST_DIR="/usr/share/fleet/flatpaks.d"
 STATE_DIR="/var/lib/fleet"
 STATE_FILE="${STATE_DIR}/flatpaks.state"
+FLATHUB_REPO="https://dl.flathub.org/repo/flathub.flatpakrepo"
 
 [ -d "${LIST_DIR}" ] || { echo "Répertoire introuvable : ${LIST_DIR}" >&2; exit 0; }
 mkdir -p "${STATE_DIR}"
 
+# Réseau prêt ? Test réel de joignabilité de Flathub. Sinon échec → relance auto.
+if ! curl -sSf -o /dev/null --max-time 15 "${FLATHUB_REPO}"; then
+    echo "Flathub injoignable (réseau pas prêt ?) → nouvel essai dans ~2 min." >&2
+    exit 1
+fi
+
 # Remote Flathub au niveau système (idempotent).
-flatpak remote-add --if-not-exists --system \
-    flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak remote-add --if-not-exists --system flathub "${FLATHUB_REPO}"
 
 # 1. Ensemble désiré = union des listes (commentaires # et lignes vides ignorés).
 desired=()
@@ -61,7 +72,9 @@ if [ -r "${STATE_FILE}" ]; then
 fi
 
 # 4. Nouvel état = listes courantes (écrit même si une installation a échoué :
-#    une app en échec sera retentée au prochain passage via les listes).
+#    une app en échec sera retentée à la relance via les listes).
 printf '%s\n' "${desired[@]}" > "${STATE_FILE}"
 
+[ "${rc}" -eq 0 ] && echo "✓ Flatpaks synchronisés." \
+                  || echo "Au moins un Flatpak a échoué → relance auto dans ~2 min." >&2
 exit "${rc}"

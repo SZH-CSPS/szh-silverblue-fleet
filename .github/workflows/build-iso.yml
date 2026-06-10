@@ -58,7 +58,6 @@ jobs:
             -v /var/lib/containers/storage:/var/lib/containers/storage \
             "${BIB_IMAGE}" \
               --type anaconda-iso \
-              --rootfs btrfs \
               --config /config.toml \
               "${IMAGE_REGISTRY}/${{ inputs.image }}:${{ inputs.tag }}"
 

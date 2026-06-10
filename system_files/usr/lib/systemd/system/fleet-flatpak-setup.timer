@@ -1,4 +1,6 @@
-# Déclenche la synchronisation Flatpak quotidienne (en plus de l'exécution au boot).
+# Déclenche la synchronisation Flatpak QUOTIDIENNE (MAJ --or-update + prune des apps
+# retirées des listes). Le réessai rapproché du premier boot est géré par le service
+# lui-même (Restart=on-failure, voir fleet-flatpak-setup.service) — pas par ce timer.
 # Persistent=true : rattrape une échéance manquée (poste éteint) au démarrage suivant.
 [Unit]
 Description=Synchronisation quotidienne des Flatpaks de la flotte

@@ -3,8 +3,10 @@
 #  fleet-provision — provisioning ADMIN post-installation (à lancer UNE FOIS,
 #  en root, après l'installation du poste) :  sudo fleet-provision
 #
-#  1. Remplace la phrase de passe LUKS saisie dans l'installateur par la phrase
-#     DE SECOURS définitive (connue de l'admin seul, conservée au coffre).
+#  1. Remplace la phrase de passe LUKS saisie dans l'installateur (« changeme »)
+#     par la phrase DE SECOURS définitive (connue de l'admin seul, au coffre).
+#  1b. Change le mot de passe du compte « admin » (+ réinitialise son trousseau
+#      GNOME, recréé au prochain login) — Entrée pour sauter cette étape.
 #  2. Dépose une clé d'enrôlement TEMPORAIRE (/var/lib/fleet/enroll.key, root 0600,
 #     stockée DANS le disque chiffré → aucune exposition au vol) qui autorisera
 #     l'enrôlement TPM au premier login : l'utilisateur n'aura qu'à CHOISIR SON
@@ -49,6 +51,24 @@ else
     printf '%s' "${new1}" | cryptsetup luksChangeKey "${dev}" \
         --key-file=<(printf '%s' "${cur}")
     echo "✓ Phrase de secours en place (l'ancienne phrase d'installation est révoquée)."
+fi
+
+# --- 1b. Mot de passe admin (+ trousseau) --------------------------------------
+echo
+read -rp "Changer le mot de passe du compte « admin » ? [O/n] " rep
+if [ "${rep:-O}" != "n" ] && [ "${rep:-O}" != "N" ]; then
+    if id admin >/dev/null 2>&1 && passwd admin; then
+        echo "✓ Mot de passe « admin » changé."
+        # Trousseau GNOME chiffré avec l'ancien mot de passe → on le réinitialise
+        # (recréé automatiquement au prochain login avec le nouveau mot de passe).
+        kr="$(getent passwd admin | cut -d: -f6)/.local/share/keyrings"
+        if [ -d "${kr}" ]; then
+            rm -f "${kr}/login.keyring" "${kr}/user.keystore"
+            echo "✓ Trousseau admin réinitialisé."
+        fi
+    else
+        echo "! Mot de passe « admin » non changé (compte absent ou saisie annulée)." >&2
+    fi
 fi
 
 # --- 2. Clé d'enrôlement temporaire (premier login = PIN seulement) ------------

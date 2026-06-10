@@ -51,6 +51,7 @@ jobs:
           # %VERSION% (la version vient de l'ARG KDRIVE_VERSION). Vide → kDrive omis.
           build-args: |
             KDRIVE_URL=${{ vars.KDRIVE_URL }}
+            VERACRYPT_URL=${{ vars.VERACRYPT_URL }}
 
       # --- Image sysadmin (dérivée de la standard locale → couches partagées) -
       - name: Build image sysadmin (buildah)

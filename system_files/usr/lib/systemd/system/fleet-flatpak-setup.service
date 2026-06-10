@@ -1,20 +1,27 @@
 # Installe/synchronise les Flatpaks de la flotte (listes /usr/share/fleet/flatpaks.d/).
 # Activé au build (build.sh). Déclenché : au boot (multi-user.target) ET chaque jour
-# par fleet-flatpak-setup.timer (postes allumés longtemps → MAJ Flatpak régulières).
+# par fleet-flatpak-setup.timer (MAJ + prune réguliers sur les postes allumés longtemps).
+#
+# Robustesse 1er boot : network-online.target peut être « atteint » avant que le WiFi
+# soit associé / le DNS prêt → le script teste la joignabilité réelle de Flathub et
+# sort en échec sinon ; Restart=on-failure réessaie alors toutes les 2 min jusqu'au
+# succès (StartLimitIntervalSec=0 : pas de plafond de relances).
 # PAS de RemainAfterExit : l'unité redevient inactive après exécution, sinon le timer
 # ne pourrait pas la redéclencher.
 [Unit]
 Description=Installation/synchronisation des Flatpaks de la flotte
 Wants=network-online.target
 After=network-online.target NetworkManager-wait-online.service
-# Flathub a besoin du réseau ; on ne bloque pas le boot si ça échoue.
 ConditionPathExists=/usr/share/fleet/flatpaks.d
+StartLimitIntervalSec=0
 
 [Service]
 Type=oneshot
 ExecStart=/usr/libexec/fleet-flatpak-sync
-# Réessaie au prochain boot / prochain déclenchement du timer si le réseau manquait.
-TimeoutStartSec=infinity
+Restart=on-failure
+RestartSec=2min
+# Gros téléchargements possibles (LibreOffice, VS Code…) : timeout généreux.
+TimeoutStartSec=1800
 
 [Install]
 WantedBy=multi-user.target

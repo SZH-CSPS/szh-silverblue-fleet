@@ -8,7 +8,8 @@
 [org/gnome/shell]
 # Active l'extension AppIndicator / KStatusNotifierItem (zone de notification).
 # Indispensable au tray de kDrive (client Qt) et utile à d'autres apps.
-# UUID vérifié dans le metadata.json de l'extension.
+# (Desktop Icons NG / ding non utilisé : absent de la base, et on ne passe plus par une
+#  icône de bureau — le script de rotation est à la racine du home d'admin.)
 enabled-extensions=['appindicatorsupport@rgcjonas.gmail.com']
 
 [org/gnome/desktop/input-sources]
@@ -21,6 +22,10 @@ sources=[('xkb', 'ch+fr'), ('xkb', 'ch')]
 # Fond d'écran de la flotte : variante claire/sombre selon le thème de l'utilisateur.
 picture-uri='file:///usr/share/backgrounds/szh/szh-wallpaper-light.png'
 picture-uri-dark='file:///usr/share/backgrounds/szh/szh-wallpaper-dark.png'
+# 'zoom' = l'image remplit l'écran (cover), léger rognage si l'écran n'est pas 16:9.
+# Les fonds szh sont en 16:9 (3840×2160) avec marges autour du logo → rognage sûr sur
+# 16:10 (ThinkPad X13 1920×1200). On évite 'scaled' : avec une seule primary-color
+# partagée, il mettrait des bandes bleu nuit autour de l'image CLAIRE (moche).
 picture-options='zoom'
 primary-color='#252b46'
 
@@ -39,3 +44,8 @@ lock-delay=uint32 0
 # utilisateur pourrait mettre « jamais » et neutraliser le verrouillage auto).
 # Présentations/vidéos : les apps inhibent l'inactivité automatiquement.
 idle-delay=uint32 600
+
+[org/gnome/nautilus/preferences]
+# Double-clic sur un script exécutable (.sh) → propose Exécuter / Afficher (au lieu
+# d'ouvrir l'éditeur). Pratique pour les scripts d'administration.
+executable-text-activation='ask'

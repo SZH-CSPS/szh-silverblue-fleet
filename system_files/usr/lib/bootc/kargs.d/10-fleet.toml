@@ -6,9 +6,14 @@
 # affiche le prompt LUKS/PIN en graphique. Sans rhgb, le prompt fonctionne aussi,
 # mais en mode texte.
 #
+# rd.vconsole.keymap=fr_CH : force le keymap suisse romand DANS l'initramfs → l'invite
+# LUKS/PIN au boot est en clavier suisse (et non QWERTY US). Pleinement effectif après
+# la régénération locale de l'initramfs (fleet-initramfs-localize.service, 1er boot),
+# qui embarque /etc/vconsole.conf. Voir aussi /etc/vconsole.conf.
+#
 # Mitigations CPU : on garde le défaut du noyau (mitigations=auto). N'ajouter
 # "mitigations=auto,nosmt" (désactive l'hyperthreading, ~-20/30 % multi-thread)
 # que si une politique de sécurité l'exige explicitement.
 #
 # Filtrer par architecture si nécessaire :  match-architectures = ["x86_64"]
-kargs = ["rhgb", "quiet"]
+kargs = ["rhgb", "quiet", "rd.vconsole.keymap=fr_CH"]

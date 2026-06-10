@@ -1,5 +1,5 @@
 [Unit]
-Description=Forcer le changement du mot de passe szh au premier login
+Description=Nom d'affichage SZH-CSPS + changement du mot de passe szh-csps au premier login
 # Ne s'exécute qu'une fois (stamp posé après).
 ConditionPathExists=!/var/lib/fleet/passwd-expired
 After=multi-user.target
@@ -8,8 +8,9 @@ After=multi-user.target
 Type=oneshot
 RemainAfterExit=yes
 ExecStartPre=/usr/bin/mkdir -p /var/lib/fleet
-# Expire le mot de passe de szh s'il existe (chage -d 0 → changement requis).
-ExecStart=/usr/bin/bash -c 'id szh >/dev/null 2>&1 && chage -d 0 szh || true'
+# Si szh-csps existe : pose le nom d'affichage (GECOS) "SZH-CSPS" puis expire le mot de
+# passe (chage -d 0 → changement requis au login). usermod = /usr/sbin, chage = /usr/bin.
+ExecStart=/usr/bin/bash -c 'id szh-csps >/dev/null 2>&1 && { /usr/sbin/usermod -c "SZH-CSPS" szh-csps; /usr/bin/chage -d 0 szh-csps; } || true'
 ExecStartPost=/usr/bin/touch /var/lib/fleet/passwd-expired
 
 [Install]

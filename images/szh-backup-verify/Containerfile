@@ -1,0 +1,31 @@
+# =============================================================================
+#  Containerfile — banc « szh-backup-verify » (vérif. backups, headless, OFFLINE).
+#
+#  Famille APPLIANCE : base fedora-bootc (PAS Silverblue) → pas de GUI/GNOME/Flatpak.
+#  Le « 0 » du 3-2-1-1-0 : zéro erreur, vérifiée. Machine jetable, sans clés vers l'infra
+#  (clé GPG de déchiffrement sur YubiKey → rien sur disque). Voir docs/ runbook backup-verify.
+#
+#  ⚠️ Contexte de build = RACINE du dépôt (COPY common/ ET images/).
+#  Build local :
+#    podman build -f images/szh-backup-verify/Containerfile -t szh-backup-verify .
+#  Installation poste : `bootc install to-disk` (live USB) — réseau actif à l'install,
+#  puis la machine vit hors-ligne. Signature + rollback restent acquis.
+# =============================================================================
+
+# Base bootc headless. Tag suivi par Renovate (voir .github/renovate.json5).
+FROM quay.io/fedora/fedora-bootc:44
+
+# 1. Noyau COMMUN (durcissement sysctl + signatures policy.json + registries + clé pub).
+COPY common/system_files/ /
+# 2. Fichiers propres au banc (politique usbguard).
+COPY images/szh-backup-verify/system_files/ /
+# 3. Scripts de vérification déterministes (dans le PATH).
+COPY images/szh-backup-verify/bin/ /usr/local/bin/
+# 4. Helpers communs + script de build.
+COPY common/build/ /tmp/common/build/
+COPY images/szh-backup-verify/build.sh /tmp/build/build.sh
+
+RUN bash /tmp/build/build.sh
+
+# Invariants bootc (échoue le build si non respectés).
+RUN bootc container lint

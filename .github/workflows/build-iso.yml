@@ -7,12 +7,12 @@ on:
   workflow_dispatch:
     inputs:
       image:
-        description: "Profil à graver dans l'ISO"
+        description: "Profil à graver dans l'ISO (le banc s'installe plutôt via bootc install to-disk)"
         type: choice
-        default: silverblue-x13
+        default: szh-silverblue-desktop
         options:
-          - silverblue-x13
-          - silverblue-x13-sysadmin
+          - szh-silverblue-desktop
+          - szh-silverblue-admin
       tag:
         description: "Tag de l'image à graver dans l'ISO"
         default: latest

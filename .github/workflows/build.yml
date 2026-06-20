@@ -6,16 +6,24 @@ on:
     paths-ignore:
       - 'docs/**'
       - '**.md'
+  # Sur PR : BUILD-ONLY (validation) — pas de push/signature (voir if: plus bas).
+  # Comme on ne peut pas builder en local, c'est ici qu'on valide avant de merger.
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
   schedule:
     # Quotidien : reconstruit pour récupérer les correctifs de sécurité de la base Fedora.
     - cron: '0 5 * * *'
   workflow_dispatch: {}
 
-# Sérialise les builds (push + cron) : évite qu'un build concurrent remplace
-# « latest » entre le push et la signature.
+# Par réf : un build de PR ne bloque pas main, et un nouveau push sur la PR annule le
+# build de PR précédent. Les pushes main / cron / dispatch (même réf) restent SÉRIALISÉS
+# (cancel-in-progress=false) → pas d'écrasement de « latest » entre push et signature.
 concurrency:
-  group: build-push
-  cancel-in-progress: false
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   IMAGE_DESKTOP: szh-silverblue-desktop
@@ -77,7 +85,10 @@ jobs:
           context: .
           oci: true
 
+      # Publication (login + push + signature) UNIQUEMENT hors PR. Sur une PR, les étapes
+      # ci-dessous sont sautées → seul le BUILD (+ `RUN bootc container lint`) valide.
       - name: Login ghcr.io
+        if: github.event_name != 'pull_request'
         uses: redhat-actions/podman-login@v1
         with:
           registry: ${{ env.IMAGE_REGISTRY }}
@@ -85,6 +96,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push desktop
+        if: github.event_name != 'pull_request'
         id: push-desktop
         uses: redhat-actions/push-to-registry@v2
         with:
@@ -93,6 +105,7 @@ jobs:
           registry: ${{ env.IMAGE_REGISTRY }}
 
       - name: Push admin
+        if: github.event_name != 'pull_request'
         id: push-admin
         uses: redhat-actions/push-to-registry@v2
         with:
@@ -101,6 +114,7 @@ jobs:
           registry: ${{ env.IMAGE_REGISTRY }}
 
       - name: Push backup-verify
+        if: github.event_name != 'pull_request'
         id: push-backup-verify
         uses: redhat-actions/push-to-registry@v2
         with:
@@ -113,11 +127,11 @@ jobs:
       # de « latest » → pas de course avec un autre build). Prérequis : secrets
       # SIGNING_SECRET + SIGNING_SECRET_PASSWORD ; clé publique committée (policy.json).
       - name: Installer cosign
-        if: ${{ vars.COSIGN_ENABLED == 'true' }}
+        if: ${{ github.event_name != 'pull_request' && vars.COSIGN_ENABLED == 'true' }}
         uses: sigstore/cosign-installer@v3
 
       - name: Signer les images (par digest)
-        if: ${{ vars.COSIGN_ENABLED == 'true' }}
+        if: ${{ github.event_name != 'pull_request' && vars.COSIGN_ENABLED == 'true' }}
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
           COSIGN_PASSWORD: ${{ secrets.SIGNING_SECRET_PASSWORD }}

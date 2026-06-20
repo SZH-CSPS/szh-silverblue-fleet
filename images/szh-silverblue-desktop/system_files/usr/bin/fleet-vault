@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+# =============================================================================
+#  fleet-vault — coffre-fichier chiffré LUKS2 (alternative NATIVE à VeraCrypt).
+#  Crée / ouvre / ferme un conteneur LUKS2 stocké dans un simple fichier.
+#  Crypto : défaut cryptsetup LUKS2 = AES-256-XTS + dérivation Argon2id (robuste).
+#
+#  Nécessite root (cryptsetup/mkfs/mount) → lancer avec sudo. C'est donc un outil pour
+#  comptes privilégiés (admin/wheel). Pour chiffrer une CLÉ USB ENTIÈRE sans privilège,
+#  utiliser plutôt « Disques » (GNOME / udisks2) → montage auto par Fichiers (Nautilus).
+#
+#  Usage :
+#    sudo fleet-vault create <fichier> <taille>   # ex. sudo fleet-vault create ~/secrets.vault 512M
+#    sudo fleet-vault open   <fichier>            # ouvre + monte dans ~/Coffres/<nom>
+#    sudo fleet-vault close  <fichier>            # démonte + ferme
+#    sudo fleet-vault status                      # coffres actuellement ouverts
+#
+#  La phrase de passe est demandée par cryptsetup (jamais en argument). Conserve-la :
+#  sans elle, le contenu est irrécupérable (c'est le but).
+# =============================================================================
+set -euo pipefail
+
+PROG="${0##*/}"
+MAP_PREFIX="fleetvault_"
+
+die() { echo "${PROG}: $*" >&2; exit 1; }
+
+[ "$(id -u)" -eq 0 ] || die "lance avec les droits root :  sudo ${PROG} $*"
+
+# Utilisateur réel (pour le $HOME du point de montage + la propriété des fichiers).
+REAL_USER="${SUDO_USER:-root}"
+REAL_HOME="$(getent passwd "${REAL_USER}" | cut -d: -f6)"
+[ -n "${REAL_HOME}" ] || REAL_HOME="/root"
+
+mapname() { printf '%s%s' "${MAP_PREFIX}" "$(basename -- "$1" | tr -c '[:alnum:]_-' '_')"; }
+mountdir() { printf '%s/Coffres/%s' "${REAL_HOME}" "$(basename -- "$1")"; }
+
+cmd_create() {
+    local file="${1:?usage: ${PROG} create <fichier> <taille>}" size="${2:?taille manquante (ex. 512M, 4G)}"
+    [ -e "${file}" ] && die "le fichier existe déjà : ${file}"
+    local map; map="$(mapname "${file}")"
+
+    # Fichier conteneur créé AU NOM de l'utilisateur réel (propriété correcte).
+    sudo -u "${REAL_USER}" truncate -s "${size}" "${file}" \
+        || die "création du conteneur impossible (${file}, ${size})"
+
+    echo "→ Formatage LUKS2 (choisis une phrase de passe SOLIDE) :"
+    cryptsetup luksFormat --type luks2 "${file}"
+    cryptsetup open "${file}" "${map}"
+    mkfs.ext4 -q "/dev/mapper/${map}"
+    cryptsetup close "${map}"
+    echo "✓ Coffre créé : ${file}  (ouvre-le :  sudo ${PROG} open ${file})"
+}
+
+cmd_open() {
+    local file="${1:?usage: ${PROG} open <fichier>}"
+    [ -f "${file}" ] || die "introuvable : ${file}"
+    local map mnt; map="$(mapname "${file}")"; mnt="$(mountdir "${file}")"
+
+    cryptsetup status "${map}" >/dev/null 2>&1 && die "déjà ouvert (${map})."
+    cryptsetup open "${file}" "${map}"
+    mkdir -p "${mnt}"
+    mount "/dev/mapper/${map}" "${mnt}"
+    chown "${REAL_USER}:${REAL_USER}" "${mnt}"
+    echo "✓ Coffre ouvert et monté : ${mnt}"
+}
+
+cmd_close() {
+    local file="${1:?usage: ${PROG} close <fichier>}"
+    local map mnt; map="$(mapname "${file}")"; mnt="$(mountdir "${file}")"
+
+    if mountpoint -q "${mnt}"; then
+        umount "${mnt}" || die "démontage impossible (fichiers encore ouverts ?) : ${mnt}"
+        rmdir "${mnt}" 2>/dev/null || true
+    fi
+    cryptsetup status "${map}" >/dev/null 2>&1 && cryptsetup close "${map}"
+    echo "✓ Coffre fermé : ${file}"
+}
+
+cmd_status() {
+    local found=0 m
+    for m in /dev/mapper/${MAP_PREFIX}*; do
+        [ -e "${m}" ] || continue
+        found=1
+        echo "ouvert : ${m##*/}  →  $(findmnt -nro TARGET "${m}" 2>/dev/null || echo '(non monté)')"
+    done
+    [ "${found}" -eq 0 ] && echo "aucun coffre ouvert."
+}
+
+case "${1:-}" in
+    create) shift; cmd_create "$@" ;;
+    open)   shift; cmd_open   "$@" ;;
+    close)  shift; cmd_close  "$@" ;;
+    status) cmd_status ;;
+    *) die "commande inconnue. Voir l'en-tête du script (create|open|close|status)." ;;
+esac

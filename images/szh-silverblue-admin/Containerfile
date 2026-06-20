@@ -1,0 +1,26 @@
+# =============================================================================
+#  Containerfile — image ADMIN « szh-silverblue-admin ».
+#
+#  DÉRIVE de szh-silverblue-desktop (modèle universal-blue : bluefin → bluefin-dx) :
+#  les couches de base ET le noyau commun sont déjà présents (hérités) → ce build
+#  n'ajoute QUE les outils sysadmin (RPM) et la liste Flatpak supplémentaire.
+#  Bascule de profil :  bootc switch ghcr.io/szh-csps/szh-silverblue-admin:latest
+#  (atomique, réversible par bootc rollback / switch inverse).
+#
+#  ⚠️ Contexte de build = RACINE du dépôt.
+#  Build local :
+#    podman build -f images/szh-silverblue-admin/Containerfile \
+#      --build-arg BASE=localhost/szh-silverblue-desktop:latest -t szh-silverblue-admin .
+#  En CI, BASE pointe sur l'image desktop fraîchement construite (build.yml).
+# =============================================================================
+ARG BASE=ghcr.io/szh-csps/szh-silverblue-desktop:latest
+FROM ${BASE}
+
+# Fichiers propres au profil admin (liste Flatpak) + script de build.
+# (Pas de COPY common/ : déjà présent dans l'image desktop dont on dérive.)
+COPY images/szh-silverblue-admin/system_files/ /
+COPY images/szh-silverblue-admin/build.sh /tmp/build/build.sh
+
+RUN bash /tmp/build/build.sh
+
+RUN bootc container lint

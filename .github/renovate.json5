@@ -18,6 +18,15 @@
       versioningTemplate: "loose",
     },
     {
+      // Banc backup-verify : suit le tag de fedora-bootc (base headless).
+      customType: "regex",
+      managerFilePatterns: ["/szh-backup-verify/Containerfile$/"],
+      matchStrings: ["FROM\\s+quay\\.io/fedora/fedora-bootc:(?<currentValue>\\d+)"],
+      depNameTemplate: "quay.io/fedora/fedora-bootc",
+      datasourceTemplate: "docker",
+      versioningTemplate: "loose",
+    },
+    {
       // Conteneur distrobox « pipeline » : suit le tag fedora de pipeline.ini
       // pour rester aligné sur la version de la base (évite la dérive / EOL).
       customType: "regex",

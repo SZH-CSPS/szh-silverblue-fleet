@@ -1,0 +1,9 @@
+# Imposition cosign ACTIVE. Indique que les signatures de ces images sont des
+# attachments sigstore (produits par `cosign sign`), stockes a cote de l'image.
+docker:
+  ghcr.io/szh-csps/szh-silverblue-desktop:
+    use-sigstore-attachments: true
+  ghcr.io/szh-csps/szh-silverblue-admin:
+    use-sigstore-attachments: true
+  ghcr.io/szh-csps/szh-backup-verify:
+    use-sigstore-attachments: true

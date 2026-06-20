@@ -1,4 +1,4 @@
-name: Build & push — Silverblue X13
+name: Build & push — flotte SZH (desktop · admin · backup-verify)
 
 on:
   push:
@@ -18,8 +18,9 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  IMAGE_NAME: silverblue-x13
-  IMAGE_NAME_SYSADMIN: silverblue-x13-sysadmin
+  IMAGE_DESKTOP: szh-silverblue-desktop
+  IMAGE_ADMIN: szh-silverblue-admin
+  IMAGE_BACKUP_VERIFY: szh-backup-verify
 
 jobs:
   build:
@@ -34,38 +35,47 @@ jobs:
       - name: Définir registre + tags
         run: |
           echo "IMAGE_REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
-          # Tag daté <fedora>.<AAAAMMJJ> (ex. 44.20260610) : permet d'épingler un poste
+          # Tag daté <fedora>.<AAAAMMJJ> (ex. 44.20260620) : permet d'épingler un poste
           # sur une version connue et de cibler un rollback via `bootc switch`.
-          FEDORA_VERSION=$(grep -oP '^ARG FEDORA_VERSION=\K\d+' Containerfile)
+          FEDORA_VERSION=$(grep -oP '^ARG FEDORA_VERSION=\K\d+' images/szh-silverblue-desktop/Containerfile)
           echo "DATE_TAG=${FEDORA_VERSION}.$(date +%Y%m%d)" >> "$GITHUB_ENV"
 
-      # --- Image standard ----------------------------------------------------
-      - name: Build image standard (buildah)
+      # --- Image DESKTOP (base de la famille bureau) -------------------------
+      # Contexte = racine du dépôt (les Containerfiles font COPY common/ ET images/).
+      - name: Build desktop (buildah)
         uses: redhat-actions/buildah-build@v2
         with:
-          image: ${{ env.IMAGE_NAME }}
+          image: ${{ env.IMAGE_DESKTOP }}
           tags: latest ${{ github.sha }} ${{ env.DATE_TAG }}
-          containerfiles: ./Containerfile
+          containerfiles: ./images/szh-silverblue-desktop/Containerfile
+          context: .
           oci: true
-          # Variable de dépôt KDRIVE_URL = MOTIF d'URL de l'AppImage kDrive avec
-          # %VERSION% (la version vient de l'ARG KDRIVE_VERSION). Vide → kDrive omis.
+          # vars.KDRIVE_URL = MOTIF d'URL de l'AppImage kDrive avec %VERSION%. Vide → omis.
           build-args: |
             KDRIVE_URL=${{ vars.KDRIVE_URL }}
-            VERACRYPT_URL=${{ vars.VERACRYPT_URL }}
 
-      # --- Image sysadmin (dérivée de la standard locale → couches partagées) -
-      - name: Build image sysadmin (buildah)
+      # --- Image ADMIN (dérive du desktop local → couches partagées) ---------
+      - name: Build admin (buildah)
         uses: redhat-actions/buildah-build@v2
         with:
-          image: ${{ env.IMAGE_NAME_SYSADMIN }}
+          image: ${{ env.IMAGE_ADMIN }}
           tags: latest ${{ github.sha }} ${{ env.DATE_TAG }}
-          containerfiles: ./Containerfile.sysadmin
+          containerfiles: ./images/szh-silverblue-admin/Containerfile
+          context: .
           oci: true
-          # Dérive de l'image standard FRAÎCHEMENT construite (stockage local) :
-          # garantit que les couches de base sont IDENTIQUES (partage sur le registre
-          # et sur les postes — un poste qui a les deux profils ne télécharge que le delta).
+          # Dérive du desktop FRAÎCHEMENT construit (stockage local) → couches identiques.
           build-args: |
-            BASE=localhost/${{ env.IMAGE_NAME }}:latest
+            BASE=localhost/${{ env.IMAGE_DESKTOP }}:latest
+
+      # --- Image BACKUP-VERIFY (appliance headless, base fedora-bootc) -------
+      - name: Build backup-verify (buildah)
+        uses: redhat-actions/buildah-build@v2
+        with:
+          image: ${{ env.IMAGE_BACKUP_VERIFY }}
+          tags: latest ${{ github.sha }} ${{ env.DATE_TAG }}
+          containerfiles: ./images/szh-backup-verify/Containerfile
+          context: .
+          oci: true
 
       - name: Login ghcr.io
         uses: redhat-actions/podman-login@v1
@@ -74,27 +84,34 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push standard
-        id: push-standard
+      - name: Push desktop
+        id: push-desktop
         uses: redhat-actions/push-to-registry@v2
         with:
-          image: ${{ env.IMAGE_NAME }}
+          image: ${{ env.IMAGE_DESKTOP }}
           tags: latest ${{ github.sha }} ${{ env.DATE_TAG }}
           registry: ${{ env.IMAGE_REGISTRY }}
 
-      - name: Push sysadmin
-        id: push-sysadmin
+      - name: Push admin
+        id: push-admin
         uses: redhat-actions/push-to-registry@v2
         with:
-          image: ${{ env.IMAGE_NAME_SYSADMIN }}
+          image: ${{ env.IMAGE_ADMIN }}
           tags: latest ${{ github.sha }} ${{ env.DATE_TAG }}
           registry: ${{ env.IMAGE_REGISTRY }}
 
-      # --- Signature cosign (activable via la variable de dépôt COSIGN_ENABLED=true) ---
-      # Prérequis : voir docs/06 (paire de clés, secrets SIGNING_SECRET +
-      # SIGNING_SECRET_PASSWORD, clé publique committée). On signe le DIGEST retourné
-      # par l'étape de push (pas une résolution ultérieure de « latest » → pas de
-      # course possible avec un autre build).
+      - name: Push backup-verify
+        id: push-backup-verify
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          image: ${{ env.IMAGE_BACKUP_VERIFY }}
+          tags: latest ${{ github.sha }} ${{ env.DATE_TAG }}
+          registry: ${{ env.IMAGE_REGISTRY }}
+
+      # --- Signature cosign (par CLÉ ; activable via vars.COSIGN_ENABLED=true) ---
+      # On signe le DIGEST retourné par l'étape de push (pas une résolution ultérieure
+      # de « latest » → pas de course avec un autre build). Prérequis : secrets
+      # SIGNING_SECRET + SIGNING_SECRET_PASSWORD ; clé publique committée (policy.json).
       - name: Installer cosign
         if: ${{ vars.COSIGN_ENABLED == 'true' }}
         uses: sigstore/cosign-installer@v3
@@ -106,9 +123,11 @@ jobs:
           COSIGN_PASSWORD: ${{ secrets.SIGNING_SECRET_PASSWORD }}
         run: |
           cosign sign -y --key env://COSIGN_PRIVATE_KEY \
-            "${IMAGE_REGISTRY}/${IMAGE_NAME}@${{ steps.push-standard.outputs.digest }}"
+            "${IMAGE_REGISTRY}/${IMAGE_DESKTOP}@${{ steps.push-desktop.outputs.digest }}"
           cosign sign -y --key env://COSIGN_PRIVATE_KEY \
-            "${IMAGE_REGISTRY}/${IMAGE_NAME_SYSADMIN}@${{ steps.push-sysadmin.outputs.digest }}"
+            "${IMAGE_REGISTRY}/${IMAGE_ADMIN}@${{ steps.push-admin.outputs.digest }}"
+          cosign sign -y --key env://COSIGN_PRIVATE_KEY \
+            "${IMAGE_REGISTRY}/${IMAGE_BACKUP_VERIFY}@${{ steps.push-backup-verify.outputs.digest }}"
 
 # -----------------------------------------------------------------------------
 # Variante registre AUTO-HÉBERGÉ (Forgejo) au lieu de ghcr.io :

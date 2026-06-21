@@ -36,7 +36,10 @@
 
 ## Reste à faire ⏳ (les briques sont écrites — il reste la VALIDATION runtime)
 - [ ] **Build CI réel** des 3 images (seul vrai test — non faisable hors CI). Cf. portes ci-dessous.
-- [ ] **PIN LUKS** desktop à corriger (cassé, reporté).
+- [x] **PIN LUKS** résolu : cause = enrôlement jamais fait (slot tpm2 absent) ;
+      `fleet-tpm-enroll` déplacé en `/usr/bin`. Reste : fiabiliser l'enrôlement au 1er login.
+- [x] **Clavier prompt LUKS** : `rhgb`/`quiet` retirés → prompt texte QWERTZ correct
+      (Plymouth saisissait en QWERTY). Fallback documenté : `plymouth.enable=0` si besoin.
 - [ ] **`common/build/lib.sh`** : créé en scaffolding, **non câblé** dans les build.sh (follow-up).
 - [ ] (Plus tard) Renommage effectif des postes déployés (`bootc switch`, cf. REDESIGN Phase 4).
 

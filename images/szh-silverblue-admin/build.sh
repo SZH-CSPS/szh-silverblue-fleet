@@ -53,6 +53,12 @@ rpm-ostree install \
 # (|| true : tolère l'absence de l'unité user selon la version du paquet — à valider au build.)
 systemctl --global enable syncthing.service 2>/dev/null || true
 
+### 1c. GDM : réafficher le compte « admin » (profil admin) --------------------
+# L'image desktop masque « admin » (compte de gestion). Ici « admin » est le compte de
+# TRAVAIL → on retire le fichier de masquage hérité ; le tmpfiles fleet-gdm-show-admin.conf
+# (system_files) repasse SystemAccount à false → « admin » visible dans GDM.
+rm -f /usr/lib/tmpfiles.d/fleet-gdm-hide-admin.conf
+
 ### 2. Commit ostree (obligatoire) ---------------------------------------------
 rm -rf /var/cache /var/lib/dnf /tmp/build /tmp/common
 ostree container commit

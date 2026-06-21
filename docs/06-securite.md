@@ -21,8 +21,15 @@ appliqué aux **3 images** : `kptr_restrict`, `dmesg_restrict`, `unprivileged_bp
   l'utilisateur choisit **seulement son PIN** (assistant graphique), la clé temporaire est
   révoquée. Lié à **PCR 7** (Secure Boot). Phrase de passe LUKS = secours permanent.
 - CLI admin / dépannage : `sudo fleet-tpm-enroll [--no-pin]`.
-- ⚠️ **Le déverrouillage par PIN ne fonctionne pas à ce jour** — à corriger (cf.
-  [RESTE-A-FAIRE.md](RESTE-A-FAIRE.md)). Repli = phrase de passe.
+- « PIN qui ne marche pas » = en général **aucun enrôlement n'a eu lieu** (slot `tpm2`
+  absent, seul `password`). Vérifier `sudo systemd-cryptenroll <dev>` ; remédier avec
+  `sudo fleet-tpm-enroll` (désormais dans **`/usr/bin`**). L'initramfs embarque `tpm2-tss`
+  + `systemd-cryptsetup` → déverrouillage TPM au boot opérationnel.
+- L'assistant graphique n'enrôle qu'au **login GNOME du compte bureau** ; sur un poste piloté
+  via `admin` seul, ou si `sudo fleet-provision` n'a pas été lancé, l'admin enrôle à la main.
+- ⚠️ **Clavier au prompt LUKS** : prompt en **mode texte** (kargs sans `rhgb`/`quiet`) pour
+  respecter le **QWERTZ suisse** — le prompt graphique Plymouth saisit en QWERTY (Z/Y
+  inversés). Le PIN numérique n'est pas affecté ; la phrase de passe de secours, si.
 
 ## greenboot (auto-rollback santé)
 Après une MAJ + reboot, des health checks décident si le boot est « réussi » ; sinon GRUB

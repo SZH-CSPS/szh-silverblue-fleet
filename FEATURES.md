@@ -466,11 +466,11 @@ system_files_sysadmin/
   `required.d/` (bloquants) lors du durcissement.
 - **cosign** (D1) : signature conditionnée à `COSIGN_ENABLED=true` — confirmer qu'elle est
   bien activée en prod (sinon `policy.json` rejette les images non signées au déploiement).
-- **Déverrouillage TPM2+PIN non fonctionnel** (E) ⚠️ : à ce jour le déverrouillage par PIN
-  au boot **ne marche pas** sur les postes (cause à investiguer : keymap/initramfs, PCR 7
-  sans Secure Boot, ou parcours d'enrôlement). Repli = phrase de passe LUKS. **À corriger
-  plus tard** (décision utilisateur). Pistes : vérifier `systemd-cryptenroll <dev>` (slot
-  tpm2 présent ?), Secure Boot activé (PCR 7), et l'invite PIN à l'initramfs.
+- **Déverrouillage TPM2+PIN** (E) : ✅ résolu — la cause était l'**absence d'enrôlement**
+  (slot `tpm2` jamais créé ; seul `password`). Remède : `sudo fleet-tpm-enroll` (déplacé en
+  `/usr/bin`). Le mécanisme `systemd-cryptenroll --tpm2-pcrs=7 --tpm2-with-pin=yes` + initramfs
+  (`tpm2-tss`, `systemd-cryptsetup`) fonctionne (Secure Boot actif). Reste : fiabiliser
+  l'enrôlement au premier login pour les futurs postes.
 - **Modifs dconf non commitées** (I1/I2) : MAJ auto GNOME Software + `date-time-format` à
   committer ou réintégrer proprement.
 ```

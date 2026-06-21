@@ -2,9 +2,11 @@
 # Les modifier ici les versionne avec l'image (cohérent sur toute la flotte)
 # plutôt que via grubby poste par poste.
 #
-# rhgb + quiet : boot graphique silencieux → Plymouth (thème Fedora par défaut)
-# affiche le prompt LUKS/PIN en graphique. Sans rhgb, le prompt fonctionne aussi,
-# mais en mode texte.
+# PAS de rhgb/quiet (volontaire) : on veut le prompt LUKS/PIN en MODE TEXTE (console).
+# Le prompt GRAPHIQUE Plymouth ne respecte pas le clavier suisse QWERTZ → il saisit en
+# QWERTY (Z/Y inversés), ce qui casse la phrase de passe au clavier suisse. Le mode texte
+# utilise le keymap console fr_CH (correct). Si Plymouth intercepte encore le clavier malgré
+# l'absence de rhgb, ajouter "plymouth.enable=0" à la liste ci-dessous.
 #
 # rd.vconsole.keymap=fr_CH : force le keymap suisse romand DANS l'initramfs → l'invite
 # LUKS/PIN au boot est en clavier suisse (et non QWERTY US). Pleinement effectif après
@@ -16,4 +18,4 @@
 # que si une politique de sécurité l'exige explicitement.
 #
 # Filtrer par architecture si nécessaire :  match-architectures = ["x86_64"]
-kargs = ["rhgb", "quiet", "rd.vconsole.keymap=fr_CH"]
+kargs = ["rd.vconsole.keymap=fr_CH"]

@@ -13,8 +13,14 @@ Miroir condensé de [../TODO.md](../TODO.md) (voir aussi FEATURES.md annexe 3).
 7. `common/build/lib.sh` créé mais **non câblé** dans les build.sh (adoption = follow-up).
 
 ## Sécurité
-- **PIN LUKS non fonctionnel** (desktop) → diagnostiquer (`systemd-cryptenroll`, Secure Boot
-  PCR 7, invite initramfs).
+- **PIN LUKS** : ✅ résolu (cause = enrôlement jamais fait ; `fleet-tpm-enroll` déplacé en
+  `/usr/bin`). Reste : fiabiliser l'enrôlement au 1er login (l'assistant ne se lance qu'au
+  login GNOME du compte bureau ; sinon `sudo fleet-provision` / `sudo fleet-tpm-enroll`).
+- **Clavier prompt LUKS** : ✅ confirmé — `rhgb`/`quiet` retirés → invite en mode TEXTE
+  (vérifié sur poste) → keymap console `fr_CH` correct. `plymouth.enable=0` NON nécessaire.
+- **GDM profil admin** : compte `admin` réaffiché (`fleet-gdm-show-admin.conf` + retrait du
+  masquage). Le desktop standard continue de masquer `admin`. GDM présélectionne ensuite le
+  dernier utilisateur connecté (pas de « défaut » figé possible nativement).
 - Activer `COSIGN_ENABLED=true` en prod (sinon policy.json rejette les images non signées).
 - greenboot : décider des checks `required.d/` (bloquants) — prudence sur le banc hors-ligne.
 - Logo GDM désactivé (asset dédié à produire).

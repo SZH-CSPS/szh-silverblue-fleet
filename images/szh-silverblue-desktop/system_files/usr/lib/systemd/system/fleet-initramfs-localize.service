@@ -1,22 +1,23 @@
-# Active la régénération LOCALE de l'initramfs au premier boot, pour embarquer le keymap
-# clavier suisse (/etc/vconsole.conf → invite LUKS/PIN en suisse, pas en QWERTY US).
+# Garantit la régénération LOCALE de l'initramfs, pour embarquer le keymap clavier
+# suisse (/etc/vconsole.conf → invite LUKS/PIN en suisse, pas en QWERTY US).
 # On NE régénère PAS dans le build conteneur (dracut y échoue) : on délègue à rpm-ostree
 # côté poste, où la régénération est fiable (validé).
 #
-# Effet : crée un nouveau déploiement avec l'initramfs régénéré → appliqué au PROCHAIN
-# redémarrage (pas de reboot automatique pour ne pas interrompre la mise en service).
-# oneshot, une seule fois (stamp). Idempotent (n'active que si pas déjà actif).
+# À CHAQUE boot (pas de stamp — leçon apprise) : le flag de régénération est stocké dans
+# l'origin du DÉPLOIEMENT et ne survit PAS à un `bootc switch`/rollback ; un stamp dans
+# /var, lui, persiste → l'ancien couple stamp+Condition bloquait toute ré-activation après
+# un switch (keymap US de retour à l'invite LUKS). Désormais : vérification à chaque boot
+# (grep, ~0 coût) ; ré-activation seulement si nécessaire.
+#
+# Effet d'une (ré)activation : crée un nouveau déploiement avec l'initramfs régénéré →
+# appliqué au PROCHAIN redémarrage (pas de reboot automatique).
 [Unit]
-Description=Régénération locale de l'initramfs (clavier suisse à l'invite LUKS) au 1er boot
-ConditionPathExists=!/var/lib/fleet/initramfs-localized
+Description=Régénération locale de l'initramfs (clavier suisse à l'invite LUKS)
 After=multi-user.target
 
 [Service]
 Type=oneshot
-RemainAfterExit=yes
-ExecStartPre=/usr/bin/mkdir -p /var/lib/fleet
-ExecStart=/usr/bin/bash -c 'rpm-ostree initramfs 2>/dev/null | grep -qiE "regeneration: enabled|enabled" || rpm-ostree initramfs --enable'
-ExecStartPost=/usr/bin/touch /var/lib/fleet/initramfs-localized
+ExecStart=/usr/bin/bash -c 'rpm-ostree initramfs 2>/dev/null | grep -qi "enabled" || rpm-ostree initramfs --enable'
 
 [Install]
 WantedBy=multi-user.target

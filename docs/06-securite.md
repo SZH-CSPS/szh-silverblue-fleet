@@ -27,9 +27,16 @@ appliqué aux **3 images** : `kptr_restrict`, `dmesg_restrict`, `unprivileged_bp
   + `systemd-cryptsetup` → déverrouillage TPM au boot opérationnel.
 - L'assistant graphique n'enrôle qu'au **login GNOME du compte bureau** ; sur un poste piloté
   via `admin` seul, ou si `sudo fleet-provision` n'a pas été lancé, l'admin enrôle à la main.
-- ⚠️ **Clavier au prompt LUKS** : prompt en **mode texte** (kargs sans `rhgb`/`quiet`) pour
-  respecter le **QWERTZ suisse** — le prompt graphique Plymouth saisit en QWERTY (Z/Y
-  inversés). Le PIN numérique n'est pas affecté ; la phrase de passe de secours, si.
+- ⚠️ **Clavier au prompt LUKS (QWERTZ suisse)** : le retrait de `rhgb`/`quiet` n'a PAS réglé
+  le problème (constaté sur image 07-05 : Z/Y toujours inversés + prompt enterré sous les
+  messages de boot, ESC nécessaire). **Cause réelle** : keymap `fr_CH` non CHARGÉ dans
+  l'initramfs générique (problème connu Fedora Atomic), aggravé par le fait que le flag de
+  régénération locale **ne survit pas à un `bootc switch`** et que l'ancien stamp `/var`
+  bloquait la ré-activation. **Correctifs** : `rhgb quiet` rétablis (prompt graphique natif),
+  kargs `vconsole.keymap=fr_CH` **et** `rd.vconsole.keymap=fr_CH`, et
+  `fleet-initramfs-localize` vérifie/ré-active la régénération **à chaque boot**.
+  Remédiation immédiate sur un poste : `sudo rpm-ostree initramfs --enable` + reboot.
+  Le PIN numérique n'est jamais affecté (chiffres identiques QWERTY/QWERTZ).
 
 ## greenboot (auto-rollback santé)
 Après une MAJ + reboot, des health checks décident si le boot est « réussi » ; sinon GRUB

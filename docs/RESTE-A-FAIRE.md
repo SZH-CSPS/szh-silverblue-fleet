@@ -16,8 +16,12 @@ Miroir condensé de [../TODO.md](../TODO.md) (voir aussi FEATURES.md annexe 3).
 - **PIN LUKS** : ✅ résolu (cause = enrôlement jamais fait ; `fleet-tpm-enroll` déplacé en
   `/usr/bin`). Reste : fiabiliser l'enrôlement au 1er login (l'assistant ne se lance qu'au
   login GNOME du compte bureau ; sinon `sudo fleet-provision` / `sudo fleet-tpm-enroll`).
-- **Clavier prompt LUKS** : ✅ confirmé — `rhgb`/`quiet` retirés → invite en mode TEXTE
-  (vérifié sur poste) → keymap console `fr_CH` correct. `plymouth.enable=0` NON nécessaire.
+- **Clavier prompt LUKS** : ❌ le mode texte n'a PAS suffi (07-05 : Z/Y toujours inversés,
+  prompt sous les messages de boot → ESC). Cause réelle : keymap non chargé dans l'initramfs
+  générique + flag de régénération perdu au `bootc switch` + stamp bloquant. Correctifs
+  poussés : rhgb/quiet rétablis, double karg `vconsole.keymap`/`rd.vconsole.keymap`,
+  `fleet-initramfs-localize` à chaque boot. **À VALIDER sur poste** :
+  `sudo rpm-ostree initramfs --enable` + reboot → tester `z` au prompt.
 - **GDM profil admin** : compte `admin` réaffiché (`fleet-gdm-show-admin.conf` + retrait du
   masquage). Le desktop standard continue de masquer `admin`. GDM présélectionne ensuite le
   dernier utilisateur connecté (pas de « défaut » figé possible nativement).

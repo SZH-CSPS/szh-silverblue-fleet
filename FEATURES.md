@@ -124,6 +124,16 @@ cosign/sigstore · `bootc-image-builder` (ISO) · GNOME/dconf · systemd · Flat
 - **Mécanisme** : signature **par digest** (sortie de l'étape push, pas de résolution
   ultérieure de `latest` → pas de course). Activée par la variable de dépôt
   `COSIGN_ENABLED=true` + secrets `SIGNING_SECRET` / `SIGNING_SECRET_PASSWORD`.
+- **Statut — ✅ ACTIF (vérifié le 2026-06-21)** : la CI signe bien en prod. Preuves :
+  (a) `cosign.pub` == la clé de `policy.json` (`silverblue-x13.pub`), **même SHA256**
+  `9dd90290…` → la vérif peut réussir ; (b) sur ghcr, les images portent des tags de
+  signature `sha256-<digest>.sig`, **dont celui du digest déployé**
+  `sha256:44a90b64…` (image `szh-silverblue-admin`). Contrôle fait via
+  `skopeo list-tags` / `skopeo inspect` (cosign absent de l'hôte, non requis pour ce constat).
+- **Nuance poste** : une machine basculée avec `bootc switch --no-signature-verification`
+  garde un *origin* `ostree-unverified-registry:` → l'image **est** signée, mais **ce poste**
+  ne vérifie pas ses MAJ tant qu'il n'est pas re-épinglé sur un origin vérifié (cf. Annexe 3).
+  Les nouvelles installs, elles, vérifient nativement via `policy.json`.
 
 ### D2. Politique de confiance des conteneurs (imposition)
 - **Fichiers** : [system_files/etc/containers/policy.json](system_files/etc/containers/policy.json),
@@ -464,8 +474,11 @@ system_files_sysadmin/
   régén « à vérifier au boot ».
 - **greenboot health check** (G2) : réseau **non bloquant** — décider quels checks passer en
   `required.d/` (bloquants) lors du durcissement.
-- **cosign** (D1) : signature conditionnée à `COSIGN_ENABLED=true` — confirmer qu'elle est
-  bien activée en prod (sinon `policy.json` rejette les images non signées au déploiement).
+- **cosign** (D1) : ✅ signature **active et vérifiée** (2026-06-21 — clés identiques, `.sig`
+  présents sur ghcr y c. le digest déployé). Reste : **re-épingler** les postes basculés en
+  `--no-signature-verification` vers un *origin vérifié* (leur `policy.json` connaît désormais
+  les nouveaux noms). Méthode exacte à confirmer selon la version de bootc (le `bootc switch`
+  nu répond « unchanged » ; pas de flag `--enforce-*` dans le `--help` observé) → à creuser.
 - **Déverrouillage TPM2+PIN** (E) : ✅ résolu — la cause était l'**absence d'enrôlement**
   (slot `tpm2` jamais créé ; seul `password`). Remède : `sudo fleet-tpm-enroll` (déplacé en
   `/usr/bin`). Le mécanisme `systemd-cryptenroll --tpm2-pcrs=7 --tpm2-with-pin=yes` + initramfs

@@ -51,6 +51,11 @@
 - Renommage d'images → re-pointer les postes déjà déployés (`bootc switch`), MAJ `policy.json`.
 
 ## Journal
+- 2026-07-05 — Clavier LUKS : retour au natif (rhgb/quiet rétablis). Cause réelle identifiée :
+  keymap fr_CH non chargé dans l'initramfs générique + flag de régénération perdu au
+  `bootc switch` + stamp /var bloquant. Fix : fleet-initramfs-localize à CHAQUE boot (sans
+  stamp), double karg vconsole.keymap/rd.vconsole.keymap. À valider sur poste
+  (`sudo rpm-ostree initramfs --enable` + reboot + test « z »).
 - 2026-06-20 — FEATURES + REDESIGN + Phase 0 + YubiKey/Syncthing livrés. Début restructuration.
 - 2026-06-20 — Restructuration monorepo complète (common/ + images/), 3 images câblées (CI,
   policy, renovate, BIB), banc szh-backup-verify créé, fleet-vault créé, docs/ reconstitués.

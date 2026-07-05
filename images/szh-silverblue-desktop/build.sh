@@ -120,6 +120,43 @@ dconf update || true
 # ET rd.vconsole.keymap (voir kargs.d/10-fleet.toml). Plymouth lit le clavier via la
 # console → hérite du keymap correct une fois celui-ci chargé.
 
+### 2f. Durcissement secureblue (voir hardening/README.md pour la matrice + reverts)
+
+# >>> fleet-hardening: hardened_malloc >>>
+# Allocateur mémoire durci (GrapheneOS hardened_malloc), préchargé globalement via
+# /etc/ld.so.preload (créé ICI, après l'install : le créer avant génèrerait des
+# warnings glibc sur tout le build). RPM depuis le COPR secureblue/packages
+# (repo livré par common/etc/yum.repos.d — utilisé AU BUILD uniquement).
+# Ne couvre PAS les Flatpaks (bac à sable) — host + CLI seulement.
+# Revert : hardening/reverts/revert_hardened_malloc.sh
+rpm-ostree install hardened_malloc
+# Échoue le build si le chemin de la lib change (sinon préload silencieusement cassé).
+test -e /usr/lib64/libhardened_malloc.so
+echo '/usr/lib64/libhardened_malloc.so' > /etc/ld.so.preload
+# <<< fleet-hardening: hardened_malloc <<<
+
+# >>> fleet-hardening: faillock >>>
+# Anti-bruteforce (50 échecs → 24 h, cf. common/etc/security/faillock.conf).
+# S'assure que pam_faillock est bien dans la pile PAM (authselect).
+# Revert : hardening/reverts/revert_faillock.sh
+authselect current 2>/dev/null | grep -q with-faillock \
+    || authselect enable-feature with-faillock 2>/dev/null || true
+# <<< fleet-hardening: faillock <<<
+
+# >>> fleet-hardening: chrony-nts >>>
+# Heure authentifiée NTS (cf. common/etc/chrony.d/90-fleet-nts.sources).
+# Garantit que chrony lit /etc/chrony.d (sourcedir absent de certaines versions).
+# Revert : hardening/reverts/revert_chrony_nts.sh
+{ [ -f /etc/chrony.conf ] && ! grep -q '^sourcedir /etc/chrony.d' /etc/chrony.conf \
+    && echo 'sourcedir /etc/chrony.d' >> /etc/chrony.conf ; } || true
+# <<< fleet-hardening: chrony-nts <<<
+
+# >>> fleet-hardening: passim >>>
+# Masque passim (cache LAN de métadonnées fwupd) : service réseau inutile à la flotte.
+# Revert : hardening/reverts/revert_passim.sh
+systemctl mask passim.service 2>/dev/null || true
+# <<< fleet-hardening: passim <<<
+
 ### 3. Permissions ------------------------------------------------------------
 chmod +x /usr/bin/fleet-provision
 chmod +x /usr/bin/fleet-vault

@@ -1,0 +1,6 @@
+# slab_debug=FZ : sanity checks (F) + red zoning (Z) sur l'allocateur slab →
+# détecte/complique les corruptions heap noyau. ⚠️ Coût perf mesurable (quelques %
+# sur les charges allocation-intensives) — accepté (décision 2026-07-05).
+# Si ralentissement constaté : hardening/reverts/revert_kargs_slab_debug.sh
+# Source : https://secureblue.dev/articles/kargs
+kargs = ["slab_debug=FZ"]

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Zone firewalld de la flotte : REMPLACE la zone FedoraWorkstation par défaut,
+  qui ouvre ssh, samba-client et TOUS les ports 1025-65535 (tcp+udp !).
+  Ici : tout fermé en entrée, sauf :
+    - dhcpv6-client : obtention d'adresse IPv6 (indispensable en réseau v6)
+    - mdns          : découverte réseau/imprimantes (Avahi, port 5353/udp)
+    - syncthing     : 22000/tcp+udp (transferts) + 21027/udp (découverte locale)
+                      — décision flotte : ouvert pour tous (inerte si non lancé)
+  L'UI Syncthing (127.0.0.1:8384) est locale : rien à ouvrir.
+  Source (approche) : https://secureblue.dev/features (firewall deny-by-default)
+  Revert : hardening/reverts/revert_firewall.sh
+-->
+<zone>
+  <short>FedoraWorkstation (flotte SZH durcie)</short>
+  <description>Tout refusé en entrée sauf DHCPv6, mDNS et Syncthing.</description>
+  <service name="dhcpv6-client"/>
+  <service name="mdns"/>
+  <service name="syncthing"/>
+  <forward/>
+</zone>

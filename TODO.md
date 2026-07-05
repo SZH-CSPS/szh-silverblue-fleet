@@ -51,6 +51,12 @@
 - Renommage d'images → re-pointer les postes déjà déployés (`bootc switch`), MAJ `policy.json`.
 
 ## Journal
+- 2026-07-05 — Durcissement secureblue implémenté (bloc A complet + ping/lockdown/
+  slab_debug/MAC/firewall/rd.shell/perf_event/hardened_malloc/faillock/NTS validés par
+  l'utilisateur). 15 fichiers de config granulaires + 15 scripts de revert
+  (hardening/reverts/) + matrice documentée (hardening/README.md, liens secureblue).
+  Exclusions notées (iommu en attente test docks). À VALIDER : build CI (COPR
+  hardened_malloc = seul point d'échec plausible), puis pilote sur le poste admin.
 - 2026-07-05 — Clavier LUKS : retour au natif (rhgb/quiet rétablis). Cause réelle identifiée :
   keymap fr_CH non chargé dans l'initramfs générique + flag de régénération perdu au
   `bootc switch` + stamp /var bloquant. Fix : fleet-initramfs-localize à CHAQUE boot (sans

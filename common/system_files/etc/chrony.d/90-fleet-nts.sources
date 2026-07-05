@@ -1,0 +1,9 @@
+# Sources de temps NTS (Network Time Security) : l'heure est AUTHENTIFIÉE (TLS),
+# un MITM ne peut plus décaler l'horloge (attaques sur TOTP, certificats, logs).
+# Les pools Fedora par défaut restent en secours (chrony privilégie les sources
+# authentifiées) — pour du NTS-only strict, voir le chrony.conf de secureblue :
+# https://github.com/secureblue/secureblue/blob/live/files/system/etc/chrony.conf
+# Prérequis réseau : 4460/tcp sortant (NTS-KE). Revert : hardening/reverts/revert_chrony_nts.sh
+server time.cloudflare.com iburst nts
+server nts.netnod.se iburst nts
+server ptbtime1.ptb.de iburst nts

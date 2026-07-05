@@ -1,0 +1,34 @@
+# =============================================================================
+#  Kargs durcissement — SOCLE (secureblue « standard », sous-ensemble zéro-impact).
+#  Coût CPU ≈ 1 % (zeroing mémoire), invisible à l'usage. Appliqué aux 3 images.
+#  Source : https://secureblue.dev/articles/kargs
+#  Revert : hardening/reverts/revert_kargs_base.sh
+#  NON repris ici : mitigations=auto,nosmt (–20/30 % perf), iommu=force (en attente
+#  test docks — cf. hardening/README.md), l1tf/spec_store (perf CPU anciens),
+#  module.sig_enforce (casserait ZFS non signé sur le banc).
+# =============================================================================
+kargs = [
+    # Mémoire : zeroing à l'allocation ET à la libération (anti use-after-free/infoleak).
+    "init_on_alloc=1",
+    "init_on_free=1",
+    # Heap : pas de fusion des caches slab + freelist randomisée (exploitation heap durcie).
+    "slab_nomerge",
+    "page_alloc.shuffle=1",
+    # Pile noyau randomisée à chaque syscall.
+    "randomize_kstack_offset=on",
+    # Interfaces legacy supprimées (ROP via vsyscall, vDSO 32 bits).
+    "vsyscall=none",
+    "vdso32=0",
+    # Pointeurs noyau hachés dans les logs, même avec slab_debug.
+    "hash_pointers=always",
+    # N'accorde pas de confiance aveugle aux graines d'entropie CPU/bootloader.
+    "random.trust_cpu=off",
+    "random.trust_bootloader=off",
+    # /proc/<pid>/mem accessible en écriture uniquement aux ptracers actifs.
+    "proc_mem.force_override=ptrace",
+    # Durcissement KVM (utile banc + libvirt éventuel sur admin).
+    "kvm.mitigate_smt_rsb=1",
+    "kvm-intel.vmentry_l1d_flush=always",
+    # Pas d'activation auto du SSH systemd via AF_VSOCK/socket.
+    "systemd.ssh_auto=no",
+]

@@ -19,9 +19,11 @@ Miroir condensé de [../TODO.md](../TODO.md) (voir aussi FEATURES.md annexe 3).
 - **Clavier prompt LUKS** : 🎯 cause CONFIRMÉE (07-05) = karg `vconsole.keymap=` VIDE posé
   par Anaconda à l'install (écrase /etc/vconsole.conf, priorité cmdline). Corrigé : kickstart
   `keyboard --vckeymap=fr_CH`, kargs d'image, rhgb/quiet rétablis, service initramfs à chaque
-  boot. **À VALIDER sur poste** :
-  `sudo rpm-ostree kargs --delete=vconsole.keymap --append=vconsole.keymap=fr_CH` + reboot
-  → tester `z` au prompt. À appliquer sur CHAQUE poste déjà installé.
+  boot. **Validation (07-05)** : karg corrigé + rhgb/quiet locaux appliqués → Plymouth
+  s'affiche directement (plus d'ESC), déverrouillage par PIN OK (enrôlement TPM confirmé).
+  Reste à valider le keymap LETTRES : test TTY (Ctrl+Alt+F3, taper z) et/ou parcours de
+  secours (3 PIN faux → phrase). À appliquer sur CHAQUE poste déjà installé :
+  `sudo rpm-ostree kargs --delete=vconsole.keymap --append=vconsole.keymap=fr_CH`.
 - **GDM profil admin** : compte `admin` réaffiché (`fleet-gdm-show-admin.conf` + retrait du
   masquage). Le desktop standard continue de masquer `admin`. GDM présélectionne ensuite le
   dernier utilisateur connecté (pas de « défaut » figé possible nativement).

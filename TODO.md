@@ -57,6 +57,11 @@
   (hardening/reverts/) + matrice documentée (hardening/README.md, liens secureblue).
   Exclusions notées (iommu en attente test docks). À VALIDER : build CI (COPR
   hardened_malloc = seul point d'échec plausible), puis pilote sur le poste admin.
+- 2026-07-05 (soir) — 2 régressions du déploiement hardening corrigées sur poste + repo :
+  (1) `policy.json` clé `_comment` → INVALIDE pour bootc → bloquait `bootc upgrade` (fix :
+  clé retirée, doc migrée vers registries.d) ; (2) `hardened_malloc` cassait le rendu des
+  icônes GNOME (librsvg) → **REVERTÉ** (script dédié) + doc à jour. Tout le reste du
+  hardening reste actif. hardened_malloc : réactivable un jour en préchargement SÉLECTIF.
 - 2026-07-05 — Clavier LUKS : retour au natif (rhgb/quiet rétablis). Cause réelle identifiée :
   keymap fr_CH non chargé dans l'initramfs générique + flag de régénération perdu au
   `bootc switch` + stamp /var bloquant. Fix : fleet-initramfs-localize à CHAQUE boot (sans

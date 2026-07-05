@@ -30,13 +30,13 @@
 | MAC randomization Wi-Fi | `common/…/etc/NetworkManager/conf.d/90-fleet-mac-randomization.conf` | scan aléatoire + MAC stable par SSID (Ethernet non touché) | [NM conf.d](https://github.com/secureblue/secureblue/tree/live/files/system/etc/NetworkManager/conf.d) | `revert_mac_randomization.sh` |
 | faillock 50/24h | `common/…/etc/security/faillock.conf` + blocs `faillock` (build.sh) | verrou 24 h après 50 échecs (reset : `faillock --user X --reset`) | [features](https://secureblue.dev/features) | `revert_faillock.sh` |
 | chrony NTS | `common/…/etc/chrony.d/90-fleet-nts.sources` + blocs `chrony-nts` | heure authentifiée (Cloudflare, Netnod, PTB) ; pool Fedora en secours | [chrony.conf](https://github.com/secureblue/secureblue/blob/live/files/system/etc/chrony.conf) | `revert_chrony_nts.sh` |
-| **hardened_malloc** | `common/…/etc/ld.so.preload` + `etc/yum.repos.d/secureblue-packages.repo` + blocs `hardened_malloc` | allocateur durci GrapheneOS préchargé partout (host ; pas les Flatpaks) | [features](https://secureblue.dev/features) · [GrapheneOS/hardened_malloc](https://github.com/GrapheneOS/hardened_malloc) | `revert_hardened_malloc.sh` |
 | passim masqué | blocs `passim` (build.sh) | service réseau LAN fwupd inutile → off | [features](https://secureblue.dev/features) | `revert_passim.sh` |
 
 ## Écarts volontaires vs secureblue (NE PAS reprendre sans réflexion)
 
 | Mesure secureblue | Pourquoi exclue chez nous |
 |---|---|
+| **hardened_malloc** (préload global) | ❌ **testé puis RETIRÉ le 2026-07-05** : casse le rendu des icônes GNOME (librsvg/SVG) via `/etc/ld.so.preload`. Alternative future = préchargement SÉLECTIF façon secureblue (exclure gnome-shell/librsvg), pas un préload aveugle. Réactivation : recréer les fichiers/blocs (voir commit du revert). [GrapheneOS/hardened_malloc](https://github.com/GrapheneOS/hardened_malloc) |
 | `mitigations=auto,nosmt`, `nosmt=force` | –20/30 % perf multithread |
 | Blacklist bluetooth / thunderbolt | casques/souris ; docks ThinkPad |
 | Blacklist nfs/cifs/sunrpc, xfrm/esp (IPsec), l2tp | montages réseau / VPN d'entreprise potentiels |
@@ -52,9 +52,9 @@
 
 ## Points de vigilance après déploiement
 
-1. **hardened_malloc** = la mesure la plus susceptible de casser une app (c'est LA raison
-   du script de revert dédié). Symptômes : crash au lancement, `SIGABRT` mémoire. Test
-   rapide d'imputation : `LD_PRELOAD= /chemin/app` (préload désactivé pour ce process).
+1. ~~**hardened_malloc**~~ **RETIRÉ le 2026-07-05** (cassait le rendu d'icônes GNOME).
+   Cf. tableau des écarts. Si un jour réactivé en sélectif : le test d'imputation d'un
+   crash reste `LD_PRELOAD= /chemin/app`.
 2. **faillock** : un utilisateur verrouillé → `sudo faillock --user <user> --reset`.
 3. **rd.shell=0** : pour déboguer un boot cassé, éditer les kargs à l'invite GRUB (`e`),
    supprimer `rd.shell=0 rd.emergency=halt` pour la session.
@@ -64,10 +64,9 @@
    `sudo rpm-ostree kargs --append=<karg>` (liste dans les .toml).
 6. **NTS** : nécessite 4460/tcp sortant. Si l'horloge dérive (réseau ultra-fermé),
    `chronyc sources -v` pour vérifier, revert sinon.
-7. **COPR secureblue/packages** : dépendance de build EXTERNE (hardened_malloc). Si le
-   COPR est indisponible, le build CI échoue (`skip_if_unavailable=False`, volontaire :
-   échec bruyant plutôt qu'image silencieusement non durcie). Amélioration possible :
-   épingler la clé GPG dans l'image comme secureblue (`/usr/share/pki/rpm-gpg/`).
+7. **COPR secureblue/packages** : n'était utilisé QUE pour hardened_malloc → retiré avec
+   lui (plus aucune dépendance de build externe). À réintroduire seulement si hardened_malloc
+   revient (épingler alors la clé GPG dans l'image, façon secureblue).
 
 ## Maintenance / veille
 

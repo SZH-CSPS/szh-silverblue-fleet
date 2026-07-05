@@ -56,6 +56,10 @@
   `bootc switch` + stamp /var bloquant. Fix : fleet-initramfs-localize à CHAQUE boot (sans
   stamp), double karg vconsole.keymap/rd.vconsole.keymap. À valider sur poste
   (`sudo rpm-ostree initramfs --enable` + reboot + test « z »).
+- 2026-07-05 (suite) — 🎯 CAUSE RACINE CONFIRMÉE par diagnostic poste (lsinitrd OK partout) :
+  karg `vconsole.keymap=` VIDE écrit par Anaconda (XKB ch(fr) sans keymap console) → écrase
+  vconsole.conf. Fix source : kickstart `keyboard --vckeymap=fr_CH --xlayouts=…` (BIB) ;
+  fix postes : `rpm-ostree kargs --delete=vconsole.keymap --append=vconsole.keymap=fr_CH`.
 - 2026-06-20 — FEATURES + REDESIGN + Phase 0 + YubiKey/Syncthing livrés. Début restructuration.
 - 2026-06-20 — Restructuration monorepo complète (common/ + images/), 3 images câblées (CI,
   policy, renovate, BIB), banc szh-backup-verify créé, fleet-vault créé, docs/ reconstitués.

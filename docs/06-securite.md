@@ -27,15 +27,17 @@ appliqué aux **3 images** : `kptr_restrict`, `dmesg_restrict`, `unprivileged_bp
   + `systemd-cryptsetup` → déverrouillage TPM au boot opérationnel.
 - L'assistant graphique n'enrôle qu'au **login GNOME du compte bureau** ; sur un poste piloté
   via `admin` seul, ou si `sudo fleet-provision` n'a pas été lancé, l'admin enrôle à la main.
-- ⚠️ **Clavier au prompt LUKS (QWERTZ suisse)** : le retrait de `rhgb`/`quiet` n'a PAS réglé
-  le problème (constaté sur image 07-05 : Z/Y toujours inversés + prompt enterré sous les
-  messages de boot, ESC nécessaire). **Cause réelle** : keymap `fr_CH` non CHARGÉ dans
-  l'initramfs générique (problème connu Fedora Atomic), aggravé par le fait que le flag de
-  régénération locale **ne survit pas à un `bootc switch`** et que l'ancien stamp `/var`
-  bloquait la ré-activation. **Correctifs** : `rhgb quiet` rétablis (prompt graphique natif),
-  kargs `vconsole.keymap=fr_CH` **et** `rd.vconsole.keymap=fr_CH`, et
-  `fleet-initramfs-localize` vérifie/ré-active la régénération **à chaque boot**.
-  Remédiation immédiate sur un poste : `sudo rpm-ostree initramfs --enable` + reboot.
+- ⚠️ **Clavier au prompt LUKS (QWERTZ suisse) — CAUSE CONFIRMÉE (2026-07-05)** : un karg
+  **`vconsole.keymap=` VIDE**, écrit par Anaconda à l'installation (conversion XKB `ch(fr)` →
+  keymap console ratée, cf. `[customizations.locale]` de BIB). Un karg présent sur la cmdline
+  est **prioritaire** sur `/etc/vconsole.conf` — même vide → keymap US, en graphique COMME en
+  texte, régénération d'initramfs ou pas. (Vérifié par `lsinitrd` : le vconsole.conf embarqué
+  et les keymaps fr_CH étaient corrects ; seul le karg vide cassait tout.)
+  **Correctifs** : kickstart avec `keyboard --vckeymap=fr_CH` explicite (futures installs) ;
+  kargs d'image `vconsole.keymap=fr_CH` + `rd.vconsole.keymap=fr_CH` ; `rhgb quiet` rétablis
+  (prompt graphique natif, plus d'ESC) ; `fleet-initramfs-localize` re-vérifié à chaque boot.
+  **Postes déjà installés** :
+  `sudo rpm-ostree kargs --delete=vconsole.keymap --append=vconsole.keymap=fr_CH` + reboot.
   Le PIN numérique n'est jamais affecté (chiffres identiques QWERTY/QWERTZ).
 
 ## greenboot (auto-rollback santé)

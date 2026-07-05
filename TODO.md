@@ -36,7 +36,10 @@
 
 ## Reste à faire ⏳ (les briques sont écrites — il reste la VALIDATION runtime)
 - [ ] **Build CI réel** des 3 images (seul vrai test — non faisable hors CI). Cf. portes ci-dessous.
-- [ ] **PIN LUKS** desktop à corriger (cassé, reporté).
+- [x] **PIN LUKS** résolu : cause = enrôlement jamais fait (slot tpm2 absent) ;
+      `fleet-tpm-enroll` déplacé en `/usr/bin`. Reste : fiabiliser l'enrôlement au 1er login.
+- [x] **Clavier prompt LUKS** : `rhgb`/`quiet` retirés → prompt texte QWERTZ correct
+      (Plymouth saisissait en QWERTY). Fallback documenté : `plymouth.enable=0` si besoin.
 - [ ] **`common/build/lib.sh`** : créé en scaffolding, **non câblé** dans les build.sh (follow-up).
 - [ ] (Plus tard) Renommage effectif des postes déployés (`bootc switch`, cf. REDESIGN Phase 4).
 
@@ -48,6 +51,15 @@
 - Renommage d'images → re-pointer les postes déjà déployés (`bootc switch`), MAJ `policy.json`.
 
 ## Journal
+- 2026-07-05 — Clavier LUKS : retour au natif (rhgb/quiet rétablis). Cause réelle identifiée :
+  keymap fr_CH non chargé dans l'initramfs générique + flag de régénération perdu au
+  `bootc switch` + stamp /var bloquant. Fix : fleet-initramfs-localize à CHAQUE boot (sans
+  stamp), double karg vconsole.keymap/rd.vconsole.keymap. À valider sur poste
+  (`sudo rpm-ostree initramfs --enable` + reboot + test « z »).
+- 2026-07-05 (suite) — 🎯 CAUSE RACINE CONFIRMÉE par diagnostic poste (lsinitrd OK partout) :
+  karg `vconsole.keymap=` VIDE écrit par Anaconda (XKB ch(fr) sans keymap console) → écrase
+  vconsole.conf. Fix source : kickstart `keyboard --vckeymap=fr_CH --xlayouts=…` (BIB) ;
+  fix postes : `rpm-ostree kargs --delete=vconsole.keymap --append=vconsole.keymap=fr_CH`.
 - 2026-06-20 — FEATURES + REDESIGN + Phase 0 + YubiKey/Syncthing livrés. Début restructuration.
 - 2026-06-20 — Restructuration monorepo complète (common/ + images/), 3 images câblées (CI,
   policy, renovate, BIB), banc szh-backup-verify créé, fleet-vault créé, docs/ reconstitués.

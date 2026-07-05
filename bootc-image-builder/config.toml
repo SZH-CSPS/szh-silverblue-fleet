@@ -16,11 +16,17 @@
 
 [customizations]
 
-# Locale et clavier (Suisse, bilingue FR-CH / DE-CH). Gérés en customizations structurées :
-# ils ne génèrent PAS de commandes « user/group », donc aucun conflit avec le kickstart.
+# Locale (Suisse, bilingue FR-CH / DE-CH). Gérée en customizations structurées :
+# ne génère PAS de commandes « user/group », donc aucun conflit avec le kickstart.
+# ⚠️ CLAVIER : PLUS ICI. `keyboard = "ch(fr)"` (XKB seul) faisait écrire par Anaconda un
+# karg `vconsole.keymap=` VIDE (conversion XKB→console ratée), qui ÉCRASE /etc/vconsole.conf
+# au boot (priorité cmdline) → invite LUKS en QWERTY US (Z/Y inversés) malgré tout le reste.
+# Le clavier est désormais déclaré DANS le kickstart avec le keymap console EXPLICITE
+# (keyboard --vckeymap=fr_CH). Bug diagnostiqué le 2026-07-05 — voir docs/06-securite.md.
+# Postes déjà installés avec le karg vide :
+#   sudo rpm-ostree kargs --delete=vconsole.keymap --append=vconsole.keymap=fr_CH
 [customizations.locale]
 languages = ["fr_CH.UTF-8", "de_CH.UTF-8"]
-keyboard = "ch(fr)"
 
 [customizations.timezone]
 timezone = "Europe/Zurich"
@@ -29,6 +35,11 @@ timezone = "Europe/Zurich"
 # (Remplace les anciens [[customizations.user]], qui entraient en conflit avec ce bloc.)
 [customizations.installer.kickstart]
 contents = """
+# --- Clavier : keymap CONSOLE explicite (fr_CH) + layouts XKB suisses ---
+# --vckeymap force Anaconda à écrire un karg vconsole.keymap=fr_CH CORRECT (et non vide,
+# cf. note [customizations.locale] ci-dessus) → invite LUKS/PIN en QWERTZ suisse.
+keyboard --vckeymap=fr_CH --xlayouts='ch (fr)','ch'
+
 # --- Partitionnement chiffré (LUKS) ---
 # Passphrase d'amorçage « changeme » (à changer au 1er login). Le type btrfs est fixé ICI :
 # du coup, retire « --rootfs btrfs » de la commande podman pour ne PAS définir le système

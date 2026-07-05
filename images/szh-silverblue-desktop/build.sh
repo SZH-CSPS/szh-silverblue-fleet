@@ -111,17 +111,20 @@ systemctl enable fwupd-refresh.timer 2>/dev/null || true
 # IMPOSÉ (clés verrouillées dans local.d/locks/00-fleet-locks). Détails : docs/04.
 dconf update || true
 
-### 2e. Splash de boot --------------------------------------------------------
-# Pas de thème Plymouth personnalisé : on garde le splash Fedora par défaut (fiable,
-# déjà dans l'initramfs). Les kargs « rhgb quiet » (usr/lib/bootc/kargs.d/10-fleet.toml)
-# garantissent le splash graphique, y compris le prompt LUKS/PIN graphique au boot ;
-# le keymap suisse de ce prompt vient de rd.vconsole.keymap + fleet-initramfs-localize.
+### 2e. Boot & invite LUKS ----------------------------------------------------
+# rhgb/quiet RÉTABLIS (défaut Fedora natif) : prompt LUKS/PIN graphique Plymouth.
+# Le bug clavier « Z/Y inversés » n'était PAS Plymouth : le keymap fr_CH n'était pas
+# CHARGÉ dans l'initramfs (fichier présent ≠ chargé — problème connu Fedora Atomic).
+# Correctif réel : régénération locale de l'initramfs (fleet-initramfs-localize, à
+# CHAQUE boot car le flag ne survit pas à un bootc switch) + kargs vconsole.keymap
+# ET rd.vconsole.keymap (voir kargs.d/10-fleet.toml). Plymouth lit le clavier via la
+# console → hérite du keymap correct une fois celui-ci chargé.
 
 ### 3. Permissions ------------------------------------------------------------
 chmod +x /usr/bin/fleet-provision
 chmod +x /usr/bin/fleet-vault
 chmod +x /usr/libexec/fleet-flatpak-sync
-chmod +x /usr/libexec/fleet-tpm-enroll
+chmod +x /usr/bin/fleet-tpm-enroll
 chmod +x /usr/libexec/fleet-tpm-enroll-helper
 chmod +x /usr/libexec/fleet-tpm-pin-setup
 chmod +x /etc/greenboot/check/wanted.d/20-fleet-network.sh

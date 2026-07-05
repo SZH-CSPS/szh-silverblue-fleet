@@ -21,8 +21,24 @@ appliqué aux **3 images** : `kptr_restrict`, `dmesg_restrict`, `unprivileged_bp
   l'utilisateur choisit **seulement son PIN** (assistant graphique), la clé temporaire est
   révoquée. Lié à **PCR 7** (Secure Boot). Phrase de passe LUKS = secours permanent.
 - CLI admin / dépannage : `sudo fleet-tpm-enroll [--no-pin]`.
-- ⚠️ **Le déverrouillage par PIN ne fonctionne pas à ce jour** — à corriger (cf.
-  [RESTE-A-FAIRE.md](RESTE-A-FAIRE.md)). Repli = phrase de passe.
+- « PIN qui ne marche pas » = en général **aucun enrôlement n'a eu lieu** (slot `tpm2`
+  absent, seul `password`). Vérifier `sudo systemd-cryptenroll <dev>` ; remédier avec
+  `sudo fleet-tpm-enroll` (désormais dans **`/usr/bin`**). L'initramfs embarque `tpm2-tss`
+  + `systemd-cryptsetup` → déverrouillage TPM au boot opérationnel.
+- L'assistant graphique n'enrôle qu'au **login GNOME du compte bureau** ; sur un poste piloté
+  via `admin` seul, ou si `sudo fleet-provision` n'a pas été lancé, l'admin enrôle à la main.
+- ⚠️ **Clavier au prompt LUKS (QWERTZ suisse) — CAUSE CONFIRMÉE (2026-07-05)** : un karg
+  **`vconsole.keymap=` VIDE**, écrit par Anaconda à l'installation (conversion XKB `ch(fr)` →
+  keymap console ratée, cf. `[customizations.locale]` de BIB). Un karg présent sur la cmdline
+  est **prioritaire** sur `/etc/vconsole.conf` — même vide → keymap US, en graphique COMME en
+  texte, régénération d'initramfs ou pas. (Vérifié par `lsinitrd` : le vconsole.conf embarqué
+  et les keymaps fr_CH étaient corrects ; seul le karg vide cassait tout.)
+  **Correctifs** : kickstart avec `keyboard --vckeymap=fr_CH` explicite (futures installs) ;
+  kargs d'image `vconsole.keymap=fr_CH` + `rd.vconsole.keymap=fr_CH` ; `rhgb quiet` rétablis
+  (prompt graphique natif, plus d'ESC) ; `fleet-initramfs-localize` re-vérifié à chaque boot.
+  **Postes déjà installés** :
+  `sudo rpm-ostree kargs --delete=vconsole.keymap --append=vconsole.keymap=fr_CH` + reboot.
+  Le PIN numérique n'est jamais affecté (chiffres identiques QWERTY/QWERTZ).
 
 ## greenboot (auto-rollback santé)
 Après une MAJ + reboot, des health checks décident si le boot est « réussi » ; sinon GRUB

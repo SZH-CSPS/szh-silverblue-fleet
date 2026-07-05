@@ -2,18 +2,27 @@
 # Les modifier ici les versionne avec l'image (cohérent sur toute la flotte)
 # plutôt que via grubby poste par poste.
 #
-# rhgb + quiet : boot graphique silencieux → Plymouth (thème Fedora par défaut)
-# affiche le prompt LUKS/PIN en graphique. Sans rhgb, le prompt fonctionne aussi,
-# mais en mode texte.
+# rhgb + quiet (défaut Fedora natif) : boot graphique silencieux → Plymouth affiche le
+# prompt LUKS/PIN en GRAPHIQUE (dialogue propre, pas de messages de boot par-dessus).
 #
-# rd.vconsole.keymap=fr_CH : force le keymap suisse romand DANS l'initramfs → l'invite
-# LUKS/PIN au boot est en clavier suisse (et non QWERTY US). Pleinement effectif après
-# la régénération locale de l'initramfs (fleet-initramfs-localize.service, 1er boot),
-# qui embarque /etc/vconsole.conf. Voir aussi /etc/vconsole.conf.
+# HISTORIQUE (ne pas re-tomber dans le piège) : on avait retiré rhgb/quiet en croyant que
+# Plymouth saisissait en QWERTY (Z/Y inversés). FAUSSE PISTE : la vraie cause était le
+# keymap fr_CH ABSENT de l'initramfs générique (buildé en conteneur) → repli US, en
+# graphique COMME en texte. Le correctif réel est la régénération LOCALE de l'initramfs
+# (fleet-initramfs-localize.service → rpm-ostree initramfs --enable), qui embarque
+# /etc/vconsole.conf + le keymap. Plymouth lit le clavier via la console → une fois le
+# keymap chargé dans l'initramfs, le prompt graphique est en suisse QWERTZ correct.
+# NB : le flag de régénération ne survit PAS à un `bootc switch` → le service le
+# re-vérifie À CHAQUE boot (voir fleet-initramfs-localize.service).
+#
+# rd.vconsole.keymap=fr_CH : syntaxe DRACUT (module i18n). vconsole.keymap=fr_CH :
+# syntaxe SYSTEMD (lue directement par systemd-vconsole-setup, prioritaire sur le
+# /etc/vconsole.conf embarqué dans l'initramfs). On met LES DEUX : selon la génération
+# de l'initramfs, l'un ou l'autre chemin fait foi. Voir aussi /etc/vconsole.conf.
 #
 # Mitigations CPU : on garde le défaut du noyau (mitigations=auto). N'ajouter
 # "mitigations=auto,nosmt" (désactive l'hyperthreading, ~-20/30 % multi-thread)
 # que si une politique de sécurité l'exige explicitement.
 #
 # Filtrer par architecture si nécessaire :  match-architectures = ["x86_64"]
-kargs = ["rhgb", "quiet", "rd.vconsole.keymap=fr_CH"]
+kargs = ["rhgb", "quiet", "rd.vconsole.keymap=fr_CH", "vconsole.keymap=fr_CH"]

@@ -31,14 +31,6 @@ dnf clean all
 
 ### 1b. Durcissement secureblue (voir hardening/README.md) ---------------------
 
-# >>> fleet-hardening: hardened_malloc >>>
-# Allocateur durci préchargé via /etc/ld.so.preload (créé ici, après l'install).
-# COPR secureblue/packages. Revert : hardening/reverts/revert_hardened_malloc.sh
-dnf install -y hardened_malloc
-test -e /usr/lib64/libhardened_malloc.so
-echo '/usr/lib64/libhardened_malloc.so' > /etc/ld.so.preload
-dnf clean all
-# <<< fleet-hardening: hardened_malloc <<<
 
 # >>> fleet-hardening: faillock >>>
 # Anti-bruteforce (common/etc/security/faillock.conf) — utile aussi sur le compte tester.

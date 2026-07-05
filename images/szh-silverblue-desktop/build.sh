@@ -122,18 +122,6 @@ dconf update || true
 
 ### 2f. Durcissement secureblue (voir hardening/README.md pour la matrice + reverts)
 
-# >>> fleet-hardening: hardened_malloc >>>
-# Allocateur mémoire durci (GrapheneOS hardened_malloc), préchargé globalement via
-# /etc/ld.so.preload (créé ICI, après l'install : le créer avant génèrerait des
-# warnings glibc sur tout le build). RPM depuis le COPR secureblue/packages
-# (repo livré par common/etc/yum.repos.d — utilisé AU BUILD uniquement).
-# Ne couvre PAS les Flatpaks (bac à sable) — host + CLI seulement.
-# Revert : hardening/reverts/revert_hardened_malloc.sh
-rpm-ostree install hardened_malloc
-# Échoue le build si le chemin de la lib change (sinon préload silencieusement cassé).
-test -e /usr/lib64/libhardened_malloc.so
-echo '/usr/lib64/libhardened_malloc.so' > /etc/ld.so.preload
-# <<< fleet-hardening: hardened_malloc <<<
 
 # >>> fleet-hardening: faillock >>>
 # Anti-bruteforce (50 échecs → 24 h, cf. common/etc/security/faillock.conf).

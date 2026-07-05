@@ -1,0 +1,9 @@
+# Initramfs verrouillé : pas de shell de debug (rd.shell=0) et HALT en cas d'urgence
+# au lieu d'un shell root (rd.emergency=halt) — un voleur ne peut pas obtenir de
+# console pré-déverrouillage.
+# ⚠️ Impact assumé : le DÉPANNAGE initramfs (type debug LUKS) devient impossible sans
+#    éditer les kargs depuis GRUB → en cas de besoin, retirer temporairement ces kargs
+#    à l'invite GRUB (touche « e »), ou reverter :
+#    hardening/reverts/revert_kargs_rdshell.sh
+# Source : https://secureblue.dev/articles/kargs
+kargs = ["rd.shell=0", "rd.emergency=halt"]

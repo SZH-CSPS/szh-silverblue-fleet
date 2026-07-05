@@ -25,7 +25,34 @@ dnf install -y \
     pcsc-lite pcsc-lite-ccid gnupg2 yubikey-manager
 # (Optionnel) ZFS UNIQUEMENT si le disque de rotation est un pool ZFS — décommenter :
 # dnf install -y zfs
+# ⚠️ ZFS = module NON SIGNÉ : incompatible avec lockdown=confidentiality (karg commun
+#    21-hardening-lockdown.toml). Si ZFS requis : hardening/reverts/revert_kargs_lockdown.sh
 dnf clean all
+
+### 1b. Durcissement secureblue (voir hardening/README.md) ---------------------
+
+# >>> fleet-hardening: hardened_malloc >>>
+# Allocateur durci préchargé via /etc/ld.so.preload (créé ici, après l'install).
+# COPR secureblue/packages. Revert : hardening/reverts/revert_hardened_malloc.sh
+dnf install -y hardened_malloc
+test -e /usr/lib64/libhardened_malloc.so
+echo '/usr/lib64/libhardened_malloc.so' > /etc/ld.so.preload
+dnf clean all
+# <<< fleet-hardening: hardened_malloc <<<
+
+# >>> fleet-hardening: faillock >>>
+# Anti-bruteforce (common/etc/security/faillock.conf) — utile aussi sur le compte tester.
+# Revert : hardening/reverts/revert_faillock.sh
+authselect current 2>/dev/null | grep -q with-faillock \
+    || authselect enable-feature with-faillock 2>/dev/null || true
+# <<< fleet-hardening: faillock <<<
+
+# >>> fleet-hardening: chrony-nts >>>
+# Heure authentifiée NTS (common/etc/chrony.d/). Utile au banc : MAJ en ligne ponctuelles.
+# Revert : hardening/reverts/revert_chrony_nts.sh
+{ [ -f /etc/chrony.conf ] && ! grep -q '^sourcedir /etc/chrony.d' /etc/chrony.conf \
+    && echo 'sourcedir /etc/chrony.d' >> /etc/chrony.conf ; } || true
+# <<< fleet-hardening: chrony-nts <<<
 
 ### 2. Utilisateur opérateur ---------------------------------------------------
 # tester : wheel (sudo) + libvirt (gestion des VM). Mot de passe / clé SSH à définir

@@ -1,0 +1,10 @@
+# Kernel lockdown en mode « confidentiality » (le plus strict) : interdit toute
+# modification du noyau à chaud ET la lecture de secrets noyau depuis l'userspace
+# (même root) — modules non signés bloqués, kexec bloqué, /dev/mem bloqué, bpf lecture
+# noyau bloqué, hibernation bloquée (suspend-to-RAM non affecté).
+# ⚠️ Impacts assumés : pas d'hibernation ; debug noyau (bpftrace/perf kernel) restreint
+#    même pour l'admin ; ZFS (module non signé) IMPOSSIBLE → si le banc doit utiliser
+#    ZFS, exécuter hardening/reverts/revert_kargs_lockdown.sh (cf. build.sh du banc).
+# Source : https://secureblue.dev/articles/kargs
+# Revert : hardening/reverts/revert_kargs_lockdown.sh
+kargs = ["lockdown=confidentiality"]

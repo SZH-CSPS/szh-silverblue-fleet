@@ -1,5 +1,4 @@
 {
-    "_comment": "Politique de confiance des images de conteneurs (flotte). (1) Les images de la flotte (szh-silverblue-desktop, szh-silverblue-admin, szh-backup-verify) DOIVENT etre signees cosign — cle publique /etc/pki/containers/silverblue-x13.pub. (2) default=reject : on n'accepte plus n'importe quel registre ; seuls les registres ALLOWLISTES ci-dessous sont autorises (la regle la plus specifique gagne, donc l'allowlist ghcr.io n'affaiblit PAS l'exigence de signature des images de la flotte). Les transports locaux (builds podman, stockage local) restent permis. Voir docs / RESTE-A-FAIRE section 4.",
     "default": [
         { "type": "reject" }
     ],

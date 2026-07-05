@@ -1,5 +1,15 @@
 # Imposition cosign ACTIVE. Indique que les signatures de ces images sont des
 # attachments sigstore (produits par `cosign sign`), stockes a cote de l'image.
+#
+# --- Documentation de ../policy.json (JSON = pas de commentaires possibles !) ---
+# ⚠️ Le parseur de bootc est STRICT : toute cle inconnue (meme "_comment") rend la
+#    politique INVALIDE et bloque `bootc upgrade` (vecu le 2026-07-05). Ne JAMAIS
+#    ajouter de cle de commentaire dans policy.json — documenter ICI ou docs/06.
+# Politique : (1) les 3 images de la flotte DOIVENT etre signees cosign (cle publique
+# /etc/pki/containers/silverblue-x13.pub) ; (2) default=reject → seuls les registres
+# allowlistes passent ; la regle la plus specifique gagne, donc l'allowlist ghcr.io
+# n'affaiblit PAS l'exigence de signature des images de la flotte ; (3) les transports
+# locaux (builds podman, stockage local) restent permis.
 docker:
   ghcr.io/szh-csps/szh-silverblue-desktop:
     use-sigstore-attachments: true
